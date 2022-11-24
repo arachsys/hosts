@@ -5,7 +5,7 @@ shopt -s dotglob extglob nullglob
 export PATH=/bin
 
 printf '\ec'
-hostname rack
+hostname anansi
 
 mount -a -n -t proc
 mount -a -n -t cgroup2,devtmpfs,sysfs,tmpfs
@@ -38,19 +38,25 @@ if [[ -c /dev/watchdog ]] && exec >/dev/watchdog; then
   while printf '\0'; do sleep 15; done
 fi & disown
 
-for TTY in /dev/tty[1-6]; do
+for TTY in /dev/tty[1-6] /dev/ttyS[0-3]; do
   daemon -c -r agetty ${TTY#/dev/}
 done
 
-for TTY in /dev/ttyS[0-3]; do
-  daemon -c -r agetty ${TTY#/dev/} 115200 vt-utf8
-done
-
 ip link set lo up
+ip netns add wifi
+ip -n wifi link set lo up
+
+ip link set eth2 up
+ip address add 91.203.59.1/22 dev eth2
+ip route add default via 91.203.56.1
 
 syslogd -s
+ueventd -t
 ssh-keygen -A && $(type -P sshd)
-ntpd -p /run/ntpd.pid
+ntpd -p /run/ntpd.pid -s
+
+iw reg set GB
+ip netns exec wifi daemon -r iwd
 
 [[ -r /dev/initctl ]] || mkfifo -m 0600 /dev/initctl
 ctrlaltdel soft && trap reboot INT

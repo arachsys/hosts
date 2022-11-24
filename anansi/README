@@ -1,9 +1,9 @@
 System info
 ===========
 
-he is an ASRockRack 1U4LW-X570/2L2T RPSU, with a 12-core AMD Ryzen 9 5900X,
-64GB ECC RAM, two 10Gb Intel X550-AT2 NICs, two 1Gb Intel i210 NICs and two
-1863GB NVMe SSDs.
+anansi is an ASRockRack 1U4LW-X570/2L2T RPSU, with a 12-core AMD Ryzen 9
+5900X, 64GB ECC RAM, two 10Gb Intel X550-AT2 NICs, two 1Gb Intel i210 NICs
+and two 1863GB NVMe SSDs.
 
 The integrated BMC is configured to redirect the UEFI console to a virtual
 8250 serial port ttyS1 (port 0x2f8, irq 3, 115200n8), exported over IPMI
