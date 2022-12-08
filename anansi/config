@@ -1,4 +1,4 @@
-# Linux/x86 6.0.9 Kernel Configuration
+# Linux/x86 6.0.12 Kernel Configuration
 #
 # CONFIG_LOCALVERSION_AUTO is not set
 CONFIG_KERNEL_ZSTD=y
@@ -369,3 +369,4 @@ CONFIG_PANIC_TIMEOUT=5
 # CONFIG_X86_VERBOSE_BOOTUP is not set
 # CONFIG_EARLY_PRINTK is not set
 # CONFIG_X86_DEBUG_FPU is not set
+CONFIG_FUNCTION_ERROR_INJECTION=y
