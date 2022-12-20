@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -o pipefail
-shopt -s dotglob extglob nullglob
+shopt -s dotglob extglob globstar nullglob
 export PATH=/bin
 
 hostname pi
@@ -13,6 +13,7 @@ mkdir -m 0755 -p /run/empty && mount -r -B /run/empty /run/empty
 mkdir -m 1777 -p /run/lock /run/shm
 
 ln -f -n -s /proc/self/fd /dev/fd
+ln -f -n -s pts/ptmx /dev/ptmx
 ln -f -n -s fd/0 /dev/stdin
 ln -f -n -s fd/1 /dev/stdout
 ln -f -n -s fd/2 /dev/stderr
@@ -39,10 +40,9 @@ mount -o remount,rw /
 mount -a -t nonfs
 
 if [[ -c /dev/watchdog ]] && exec >/dev/watchdog; then
-  enable -f /lib/bash/sleep sleep
   trap 'printf V && exit' TERM
-  while printf '\0'; do sleep 15; done
-fi & disown
+  while printf '\0'; do read -t 15; done
+fi <><(:) & disown
 
 for TTY in /dev/tty[1-6]; do
   daemon -c -r agetty ${TTY#/dev/}
@@ -50,12 +50,12 @@ done
 
 ip link set lo up
 
-syslogd -s
+syslogd -k
 iw reg set US && daemon -p /run/iwd.pid -r iwd
 ssh-keygen -A && $(type -P sshd)
-daemon -w /run/resolv.dir/wlan0.dns ntpd -p /run/ntpd.pid
+daemon ntpd -p /run/ntpd.pid -s
 
-[[ -r /dev/initctl ]] || mkfifo -m 0600 /dev/initctl
+mkfifo -m 0600 /dev/initctl
 ctrlaltdel soft && trap reboot INT
 while read -d '' -r MESSAGE; do
   [[ $MESSAGE == @(halt|poweroff|reboot) ]] && break
@@ -64,5 +64,5 @@ done <>/dev/initctl
 
 kill -TERM -1 && sleep 2 && kill -KILL -1
 touch -c /var/lib/ntpd.drift && sync
-swapoff -a && umount -a -r
+swapoff -a && umount -a -d -r
 sync && exec stop "$MESSAGE"
