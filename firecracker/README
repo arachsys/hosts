@@ -7,3 +7,9 @@ This is a minimal kernel configuration for Firecracker VMs. Build with
   strip vmlinux
 
 as we need an ELF executable rather than a bootable compressed image.
+
+An example configuration is in guest.json; run with
+
+  firecracker --no-api --config-file guest.json
+
+to use the kernel from /guest/linux and rootfs from /guest/rootfs.
