@@ -13,8 +13,8 @@ iproute2
 iputils-ping
 iw
 iwd
-libelf
 kakoune
+libelf
 m4
 mtr
 nftables
