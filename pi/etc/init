@@ -1,68 +1,95 @@
 #!/bin/bash
 
 set -o pipefail
-shopt -s dotglob extglob globstar nullglob
 export PATH=/bin
 
-hostname pi
+start() {
+  hostname pi
 
-mount -a -n -t proc
-mount -a -n -t cgroup2,devtmpfs,sysfs,tmpfs
-mkdir -p /dev/pts && mount -a -n -t devpts
-mkdir -m 0755 -p /run/empty && mount -r -B /run/empty /run/empty
-mkdir -m 1777 -p /run/lock /run/shm
+  mount -a -n -t proc
+  mount -a -n -t cgroup2,devtmpfs,sysfs,tmpfs
+  mkdir -m 0755 -p /dev/pts /run/empty
+  mkdir -m 1777 -p /run/lock /run/shm
+  mount -r -B /run/empty /run/empty
 
-ln -f -n -s /proc/self/fd /dev/fd
-ln -f -n -s pts/ptmx /dev/ptmx
-ln -f -n -s fd/0 /dev/stdin
-ln -f -n -s fd/1 /dev/stdout
-ln -f -n -s fd/2 /dev/stderr
+  mount -a -n -t devpts
+  ln -f -n -s pts/ptmx /dev/ptmx
 
-echo -n unmap >/sys/block/sda/device/scsi_disk/*/provisioning_mode
-echo -n activity >/sys/class/leds/ACT/trigger
+  ln -f -n -s /proc/self/fd /dev/fd
+  ln -f -n -s fd/0 /dev/stdin
+  ln -f -n -s fd/1 /dev/stdout
+  ln -f -n -s fd/2 /dev/stderr
 
-if [[ -f /var/lib/ntpd.drift ]]; then
-  date -s $(stat -c @%Z /var/lib/ntpd.drift) >/dev/null
-fi
+  echo -n unmap >/sys/block/sda/device/scsi_disk/*/provisioning_mode
+  echo -n activity >/sys/class/leds/ACT/trigger
 
-if ZRAM=$(zramctl -f -s 1G); then
-  mkswap $ZRAM >/dev/null
-  swapon -d $ZRAM
-fi
+  if [[ -f /var/lib/ntpd.drift ]]; then
+    date -s $(stat -c @%Z /var/lib/ntpd.drift) >/dev/null
+  fi
 
-mount -n -o remount,ro /
-fsck -a -A -P -T >/dev/null
-if [[ $? -gt 1 ]]; then
-  sulogin -p /dev/console
-  sync && exec stop reboot
-fi
-mount -o remount,rw /
-mount -a -t nonfs
+  if ZRAM=$(zramctl -f -s 1G); then
+    mkswap $ZRAM >/dev/null
+    swapon -d $ZRAM
+  fi
 
-if [[ -c /dev/watchdog ]] && exec >/dev/watchdog; then
-  trap 'printf V && exit' TERM
-  while printf '\0'; do read -t 15; done
-fi <><(:) & disown
+  mount -n -o remount,ro /
+  fsck -a -A -P -T >/dev/null
+  if [[ $? -gt 1 ]]; then
+    sulogin -p /dev/console
+    sync && exec stop reboot
+  fi
+  mount -o remount,rw /
+  mount -a -t nonfs
 
-for TTY in /dev/tty[1-6]; do
-  daemon -c -r agetty ${TTY#/dev/}
-done
+  if [[ -c /dev/watchdog ]] && exec >/dev/watchdog; then
+    trap 'printf V && exit' TERM
+    while printf '\0'; do read -t 15; done
+  fi <><(:) & disown
 
-ip link set lo up
+  for TTY in /dev/tty[1-6]; do
+    daemon -c -r agetty ${TTY#/dev/}
+  done
 
-syslogd -k
-iw reg set US && daemon -p /run/iwd.pid -r iwd
-ssh-keygen -A && $(type -P sshd)
-daemon ntpd -p /run/ntpd.pid -s
+  ip link set lo up
+  iw reg set US
 
-mkfifo -m 0600 /dev/initctl
-ctrlaltdel soft && trap reboot INT
-while read -d '' -r MESSAGE; do
-  [[ $MESSAGE == @(halt|poweroff|reboot) ]] && break
-  [[ ${MESSAGE%% *} == run ]] && eval "${MESSAGE#run }"
-done <>/dev/initctl
+  syslogd -k
+  daemon -p /run/iwd.pid -r iwd
+  ssh-keygen -A && $(type -P sshd)
+  daemon ntpd -p /run/ntpd.pid -s
+}
 
-kill -TERM -1 && sleep 2 && kill -KILL -1
-touch -c /var/lib/ntpd.drift && sync
-swapoff -a && umount -a -d -r
-sync && exec stop "$MESSAGE"
+listen() {
+  if [[ ! -p /dev/initctl ]]; then
+    rm -f /dev/initctl
+    mkfifo -m 0600 /dev/initctl
+  fi
+
+  trap "printf '\0reboot\0' >/dev/initctl" INT
+  ctrlaltdel soft
+
+  while read -d '' -r MESSAGE; do
+    case "$MESSAGE" in
+      halt | poweroff | reboot)
+        exec "$0" stop "$MESSAGE"
+        ;;
+      run\ *)
+        eval "${MESSAGE#run }"
+        ;;
+    esac
+  done <>/dev/initctl
+}
+
+stop() {
+  kill -TERM -1 && sleep 2 && kill -KILL -1
+  touch -c /var/lib/ntpd.drift
+  if swapoff -a && umount -a -r; then
+    echo "Remounted filesystems read-only"
+  else
+    sync && echo "Flushed filesystem writes"
+  fi
+  exec stop "$@"
+}
+
+trap listen EXIT
+"${@:-start}"
