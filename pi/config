@@ -1,4 +1,4 @@
-# Linux/arm64 6.1.9 Kernel Configuration
+# Linux/arm64 6.2.0 Kernel Configuration
 #
 # CONFIG_LOCALVERSION_AUTO is not set
 CONFIG_DEFAULT_INIT="/etc/init"
@@ -12,6 +12,7 @@ CONFIG_PREEMPT=y
 CONFIG_TASKSTATS=y
 CONFIG_TASK_DELAY_ACCT=y
 CONFIG_PSI=y
+CONFIG_RCU_LAZY=y
 CONFIG_IKCONFIG=y
 CONFIG_IKCONFIG_PROC=y
 CONFIG_MEMCG=y
@@ -138,7 +139,6 @@ CONFIG_NFT_MASQ=y
 CONFIG_NFT_REDIR=y
 CONFIG_NFT_NAT=y
 CONFIG_NFT_TUNNEL=y
-CONFIG_NFT_OBJREF=y
 CONFIG_NFT_QUOTA=y
 CONFIG_NFT_REJECT=y
 CONFIG_NFT_HASH=y
@@ -179,7 +179,7 @@ CONFIG_PCIE_BRCMSTB=y
 CONFIG_DEVTMPFS=y
 CONFIG_DEVTMPFS_MOUNT=y
 CONFIG_DEVTMPFS_SAFE=y
-CONFIG_EXTRA_FIRMWARE="brcm/brcmfmac43455-sdio.bin brcm/brcmfmac43455-sdio.clm_blob brcm/brcmfmac43455-sdio.raspberrypi,4-model-b.txt regulatory.db"
+CONFIG_EXTRA_FIRMWARE="brcm/brcmfmac43455-sdio.raspberrypi,4-model-b.bin brcm/brcmfmac43455-sdio.raspberrypi,4-model-b.clm_blob brcm/brcmfmac43455-sdio.raspberrypi,4-model-b.txt regulatory.db"
 CONFIG_EXTRA_FIRMWARE_DIR="../firmware"
 CONFIG_MHI_BUS=y
 CONFIG_CONNECTOR=y
@@ -229,6 +229,7 @@ CONFIG_INPUT_EVDEV=y
 # CONFIG_MOUSE_PS2 is not set
 # CONFIG_SERIO is not set
 # CONFIG_LEGACY_PTYS is not set
+# CONFIG_LEGACY_TIOCSTI is not set
 CONFIG_SERIAL_8250=y
 # CONFIG_SERIAL_8250_DEPRECATED_OPTIONS is not set
 # CONFIG_SERIAL_8250_16550A_VARIANTS is not set

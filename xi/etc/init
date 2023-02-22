@@ -20,8 +20,6 @@ start() {
   ln -f -n -s fd/1 /dev/stdout
   ln -f -n -s fd/2 /dev/stderr
 
-  echo 0 >/sys/bus/usb/devices/usb3/authorized
-
   if ZRAM=$(zramctl -f -s 1G); then
     mkswap $ZRAM >/dev/null
     swapon -d $ZRAM
@@ -49,6 +47,7 @@ start() {
   iw reg set US
 
   syslogd -k
+  ueventd -t
   daemon -p /run/iwd.pid -r iwd
   ssh-keygen -A && $(type -P sshd)
   daemon ntpd -p /run/ntpd.pid -s

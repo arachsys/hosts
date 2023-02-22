@@ -17,12 +17,9 @@ The kernel is booted directly by the UEFI BIOS with command line
 
   linux.efi loglevel=2 root=/dev/nvme0n1p2 tsc=reliable
 
-We use a 1G zram device as swap to limit SSD wear, and run
-
-  echo 0 >/sys/bus/usb/devices/usb3/authorized
-
-early in /etc/init to work around a hardware/BIOS bug with a phantom
-USB device which fails to enumerate.
+We use a 1G zram device as swap to limit SSD wear and provide a ueventd
+disable rule to work around a hardware/BIOS bug with a phantom USB device
+which fails to enumerate.
 
 
 Upstream firmware binaries
@@ -36,6 +33,9 @@ and Intel AX200 wifi firmware firmware/iwlwifi-*.ucode are obtained from
 The firmware/regulatory.db database is obtained from
 
   https://git.kernel.org/pub/scm/linux/kernel/git/sforshee/wireless-regdb.git
+
+The firmware/bios/ directory contains a flash image for the deployed version
+of the manufacturer's UEFI BIOS.
 
 
 Kernel patches
