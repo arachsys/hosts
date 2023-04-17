@@ -7,15 +7,12 @@ start() {
   printf '\ec'
   hostname anansi
 
-  mount -a -n -t proc
-  mount -a -n -t cgroup2,devtmpfs,sysfs,tmpfs
-  mkdir -m 0755 -p /dev/pts /run/empty
+  mount -a -t proc
+  mount -a -m -t cgroup2,devpts,devtmpfs,sysfs,tmpfs
+  mount -m -r -B /run/empty /run/empty
   mkdir -m 1777 -p /run/lock /run/shm
-  mount -r -B /run/empty /run/empty
 
-  mount -a -n -t devpts
   ln -f -n -s pts/ptmx /dev/ptmx
-
   ln -f -n -s /proc/self/fd /dev/fd
   ln -f -n -s fd/0 /dev/stdin
   ln -f -n -s fd/1 /dev/stdout
@@ -26,7 +23,7 @@ start() {
     swapon -d $ZRAM
   fi
 
-  mount -n -o remount,ro /
+  mount -o remount,ro /
   fsck -a -A -P -T >/dev/null
   if [[ $? -gt 1 ]]; then
     sulogin -p /dev/console
