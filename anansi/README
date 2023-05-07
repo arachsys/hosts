@@ -20,7 +20,7 @@ The SSDs are GPT partitioned:
 
 with /dev/nvme0n1p1 and /dev/nvme1n1p1 as /boot/nvme0 and /boot/nvme1 (vfat)
 respectively. /dev/nvme0n1p2 and /dev/nvme1n1p2 are mirrored in an md raid1
-as / (ext4).
+as / (ext4) created with mkfs.ext4 -O project,quota.
 
 The kernel is booted directly by the UEFI BIOS with command line
 
