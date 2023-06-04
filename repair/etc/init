@@ -1,0 +1,34 @@
+#!/bin/bash
+
+set -o pipefail
+export PATH=/bin
+
+hostname repair
+
+mount -a -t proc
+mount -a -m -t cgroup2,devpts,devtmpfs,sysfs,tmpfs
+mount -m -r -B /run/empty /run/empty
+mkdir -m 1777 -p /run/lock /run/shm
+
+ln -f -n -s pts/ptmx /dev/ptmx
+ln -f -n -s /proc/self/fd /dev/fd
+ln -f -n -s fd/0 /dev/stdin
+ln -f -n -s fd/1 /dev/stdout
+ln -f -n -s fd/2 /dev/stderr
+
+if ZRAM=$(zramctl -f -s 1G); then
+  mkswap $ZRAM >/dev/null
+  swapon -d $ZRAM
+fi
+
+ip link set lo up
+syslogd -k
+sulogin -p /dev/console
+
+kill -TERM -1 && sleep 2 && kill -KILL -1
+if swapoff -a && umount -a -r; then
+  echo "Remounted filesystems read-only"
+else
+  sync && echo "Flushed filesystem writes"
+fi
+exec stop reboot

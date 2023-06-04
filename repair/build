@@ -1,0 +1,33 @@
+#!/bin/bash
+
+set -e -o pipefail
+shopt -s dotglob extglob globstar nullglob
+
+cd -- "${0%/*}"
+mkdir -p boot
+
+if [[ -d $IMGDIR/../amd64 ]]; then
+  export IMGDIR=$IMGDIR/../amd64
+elif [[ -d $HOME/img/amd64 ]]; then
+  export IMGDIR=$HOME/img/amd64
+else
+  echo "Unable to find amd64 images" >&2
+  exit 1
+fi
+
+TMP=$(mktemp -d build-XXXXXX)
+trap 'rm -f -r $TMP' EXIT
+
+pkg system $TMP/rootfs dmsetup dosfstools e2fsprogs file ipmitool iproute2 \
+  iputils-ping iw iwd kakoune ldns-tools libpcap mdadm mtr nano nftables \
+  openntpd openssh rsync shadow smartmon strace tcpdump tmux wireguard
+update-etc $TMP/rootfs/etc
+
+mkdir -p $TMP/rootfs/{home/root,run/empty,sys}
+mkdir -m 1777 -p $TMP/rootfs/run/{lock,shm}
+rm -f -r $TMP/rootfs/{etc/resolv.conf,lib/include,lib/static}
+cp -d -R -T etc $TMP/rootfs/etc && chmod 0600 $TMP/rootfs/etc/shadow
+ln -f -s etc/init $TMP/rootfs/init
+
+tar -c -f boot/repair.img --format=newc --strip-components=2 --zstd \
+  --options zstd:compression-level=9 $TMP/rootfs

@@ -1,0 +1,31 @@
+#!/bin/bash
+
+set -e -o pipefail
+shopt -s dotglob extglob globstar nullglob
+cd -- "${0%/*}"
+
+if ! type -t firecracker >/dev/null; then
+  echo 'Missing hypervisor: firecracker not found' 2>&1
+  exit 1
+elif [[ ! -f ../firecracker/boot/linux ]]; then
+  echo 'Missing kernel: ../firecracker/boot/linux not found' 2>&1
+  exit 1
+elif [[ ! -f boot/repair.img ]]; then
+  echo 'Missing initramfs: boot/repair.img not found' 2>&1
+  exit 1
+fi
+
+exec firecracker --config-file /dev/fd/3 --no-api 3<<EOF
+{
+  "boot-source": {
+    "kernel_image_path": "../firecracker/boot/linux",
+    "initrd_path": "boot/repair.img",
+    "boot_args": "quiet"
+  },
+  "machine-config": {
+    "vcpu_count": 1,
+    "mem_size_mib": 1024
+  },
+  "drives": []
+}
+EOF
