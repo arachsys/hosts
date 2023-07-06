@@ -1,34 +1,40 @@
 #!/bin/bash
 
 set -o pipefail
+shopt -s nullglob
 export PATH=/bin
 
-hostname repair
+start() {
+  hostname repair
 
-mount -a -t proc
-mount -a -m -t cgroup2,devpts,devtmpfs,sysfs,tmpfs
-mount -m -r -B /run/empty /run/empty
-mkdir -m 1777 -p /run/lock /run/shm
+  mount -m -t devtmpfs -o mode=0755,noexec devtmpfs /dev
+  mount -m -t proc -o nodev,noexec proc /proc
+  mount -m -t sysfs -o nodev,noexec sysfs /sys
 
-ln -f -n -s pts/ptmx /dev/ptmx
-ln -f -n -s /proc/self/fd /dev/fd
-ln -f -n -s fd/0 /dev/stdin
-ln -f -n -s fd/1 /dev/stdout
-ln -f -n -s fd/2 /dev/stderr
+  ln -f -n -s /proc/self/fd /dev/fd
+  ln -f -n -s fd/0 /dev/stdin
+  ln -f -n -s fd/1 /dev/stdout
+  ln -f -n -s fd/2 /dev/stderr
 
-if ZRAM=$(zramctl -f -s 1G); then
-  mkswap $ZRAM >/dev/null
-  swapon -d $ZRAM
-fi
+  while read TTY _; do
+    TERM=vt102 setsid -c -f bash -l <>/dev/$TTY 1>&0 2>&1
+  done < /proc/consoles
 
-ip link set lo up
-syslogd -k
-sulogin -p /dev/console
+  trap 'exec "$0" stop reboot' INT
+  trap 'exec "$0" stop poweroff' TERM
 
-kill -TERM -1 && sleep 2 && kill -KILL -1
-if swapoff -a && umount -a -r; then
-  echo "Remounted filesystems read-only"
-else
-  sync && echo "Flushed filesystem writes"
-fi
-exec stop reboot
+  ctrlaltdel soft
+  while true; do read; done <><(:)
+}
+
+stop() {
+  kill -TERM -1 && sleep 2 && kill -KILL -1
+  if swapoff -a && umount -a -q -r; then
+    echo "Remounted filesystems read-only"
+  else
+    sync && echo "Flushed filesystem writes"
+  fi
+  exec stop "$@"
+}
+
+"${@:-start}"

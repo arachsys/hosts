@@ -1,16 +1,20 @@
 System info
 ===========
 
-This is a build script for the repair.img initramfs used for emergency
-repair on Arachsys machines. Build with 'build' and verify with 'test'
-if firecracker and ../firecracker/boot/linux are available.
+This is a build script for a repair.img initramfs used for emergency repair
+when developing Arachsys Linux machines. Build with 'build' and verify with
+'test' if firecracker and ../firecracker/boot/linux are available.
 
 To boot from the UEFI shell, use
 
   linux.efi initrd=repair.img quiet
 
 Including the 'quiet' argument helps prevent kernel messages flooding
-the console while it is in interactive use.
+the console while it is in interactive use. Multiple console arguments
+can be given to the kernel: if so, repair.img will start a shell on all
+of them rather than just the last console listed.
 
-Exiting from the sulogin shell will automatically reboot the host after
-attempting to cleanly shutdown any filesystems still mounted.
+When maintenance is complete, reboot or power down the host with 'reboot'
+or 'poweroff' in the usual way, which will attempt to cleanly shutdown
+any filesystems still mounted. Exiting from the maintenance shell will
+spawn a new one to avoid leaving the machine in an unresponsive state.

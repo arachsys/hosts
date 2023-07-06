@@ -18,16 +18,19 @@ fi
 TMP=$(mktemp -d build-XXXXXX)
 trap 'rm -f -r $TMP' EXIT
 
-pkg system $TMP/rootfs dmsetup dosfstools e2fsprogs file ipmitool iproute2 \
-  iputils-ping iw iwd kakoune ldns-tools libpcap mdadm mtr nano nftables \
-  openntpd openssh rsync shadow smartmon strace tcpdump tmux wireguard
+pkg system $TMP/rootfs dosfstools e2fsprogs file iproute2 iputils-ping \
+  iw iwd kakoune ldns-tools lvm2 mtr nftables openntpd openssh rsync \
+  shadow smartmon strace tcpdump tmux wireguard
+
+cp -d -R -T etc $TMP/rootfs/etc
 update-etc $TMP/rootfs/etc
 
-mkdir -p $TMP/rootfs/{home/root,run/empty,sys}
+mkdir -p $TMP/rootfs/{run/empty,sys}
 mkdir -m 1777 -p $TMP/rootfs/run/{lock,shm}
-rm -f -r $TMP/rootfs/{etc/resolv.conf,lib/include,lib/static}
-cp -d -R -T etc $TMP/rootfs/etc && chmod 0600 $TMP/rootfs/etc/shadow
 ln -f -s etc/init $TMP/rootfs/init
+ln -f -s kak $TMP/rootfs/bin/vi
+
+rm -f -r $TMP/rootfs/{etc/resolv.conf,lib/include,lib/static}
 
 tar -c -f boot/repair.img --format=newc --strip-components=2 --zstd \
   --options zstd:compression-level=9 $TMP/rootfs
