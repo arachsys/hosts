@@ -1,4 +1,4 @@
-# Linux/x86 6.3.2 Kernel Configuration
+# Linux/x86 6.4.2 Kernel Configuration
 #
 # CONFIG_LOCALVERSION_AUTO is not set
 CONFIG_KERNEL_ZSTD=y
@@ -58,6 +58,7 @@ CONFIG_EFI_STUB=y
 # CONFIG_EFI_HANDOVER_PROTOCOL is not set
 CONFIG_HZ_1000=y
 CONFIG_KEXEC_FILE=y
+CONFIG_ADDRESS_MASKING=y
 CONFIG_LEGACY_VSYSCALL_NONE=y
 # CONFIG_MODIFY_LDT_SYSCALL is not set
 # CONFIG_ACPI_REV_OVERRIDE_POSSIBLE is not set
@@ -176,7 +177,7 @@ CONFIG_PCIEAER=y
 CONFIG_DEVTMPFS=y
 CONFIG_DEVTMPFS_MOUNT=y
 CONFIG_DEVTMPFS_SAFE=y
-CONFIG_EXTRA_FIRMWARE="amd-ucode/microcode_amd_fam17h.bin amdgpu/renoir_asd.bin amdgpu/renoir_ce.bin amdgpu/renoir_dmcub.bin amdgpu/renoir_gpu_info.bin amdgpu/renoir_me.bin amdgpu/renoir_mec.bin amdgpu/renoir_mec2.bin amdgpu/renoir_pfp.bin amdgpu/renoir_rlc.bin amdgpu/renoir_sdma.bin amdgpu/renoir_ta.bin amdgpu/renoir_vcn.bin iwlwifi-cc-a0-74.ucode regulatory.db"
+CONFIG_EXTRA_FIRMWARE="amd-ucode/microcode_amd_fam17h.bin amdgpu/renoir_asd.bin amdgpu/renoir_ce.bin amdgpu/renoir_dmcub.bin amdgpu/renoir_gpu_info.bin amdgpu/renoir_me.bin amdgpu/renoir_mec.bin amdgpu/renoir_mec2.bin amdgpu/renoir_pfp.bin amdgpu/renoir_rlc.bin amdgpu/renoir_sdma.bin amdgpu/renoir_ta.bin amdgpu/renoir_vcn.bin iwlwifi-cc-a0-77.ucode regulatory.db"
 CONFIG_EXTRA_FIRMWARE_DIR="../firmware"
 CONFIG_CONNECTOR=y
 CONFIG_SYSFB_SIMPLEFB=y
@@ -247,7 +248,6 @@ CONFIG_MFD_INTEL_LPSS_PCI=y
 CONFIG_DRM=y
 CONFIG_DRM_AMDGPU=y
 CONFIG_DRM_AMD_ACP=y
-CONFIG_DRM_AMD_DC_HDCP=y
 CONFIG_HSA_AMD=y
 CONFIG_DRM_SIMPLEDRM=y
 CONFIG_FB=y
@@ -293,7 +293,6 @@ CONFIG_FS_ENCRYPTION_INLINE_CRYPT=y
 CONFIG_FANOTIFY=y
 CONFIG_QUOTA=y
 CONFIG_QUOTA_NETLINK_INTERFACE=y
-# CONFIG_PRINT_QUOTA_WARNING is not set
 CONFIG_QFMT_V2=y
 CONFIG_AUTOFS_FS=y
 CONFIG_FUSE_FS=y

@@ -12,4 +12,4 @@ An example configuration is in guest.json; run with
 
   firecracker --no-api --config-file guest.json
 
-to use the kernel from /guest/linux and rootfs from /guest/rootfs.
+to use the kernel 'linux' and rootfs 'rootfs' in the working directory.
