@@ -6,15 +6,16 @@ GPU, 16GB RAM, Intel e1000e NIC, Intel AC8260 wifi and a 932GB NVMe SSD.
 
 The SSD is GPT partitioned:
 
-  Device              Start        End    Sectors  Size Type
-  /dev/nvme0n1p1       2048    1050623    1048576  512M EFI System
-  /dev/nvme0n1p2    1050624 1953525134 1952474511  931G Linux filesystem
+  Device           Start        End    Sectors  Size Type             Name
+  /dev/nvme0n1p1    2048    1050623    1048576  512M EFI System       boot
+  /dev/nvme0n1p2 1050624 1953524509 1952473886  931G Linux filesystem root
 
-with /dev/nvme0n1p1 as /boot (vfat) and /dev/nvme0n1p2 as / (ext4).
+/dev/nvme0n1p1 is /boot (vfat for EFI) with GPT and FS label 'boot'.
+/dev/nvme0n1p2 is / (ext4, -O project,quota) with GPT and FS label 'root'.
 
 The kernel is booted directly by the UEFI BIOS with command line
 
-  loglevel=2 root=/dev/nvme0n1p2
+  linux.efi loglevel=2 root=PARTLABEL=root
 
 We use a 1G zram device as swap to limit SSD wear.
 
