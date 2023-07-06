@@ -1,0 +1,34 @@
+#!/bin/bash
+
+set -e -o pipefail
+shopt -s dotglob extglob globstar nullglob
+
+cd -- "${0%/*}"
+mkdir -p ../boot
+
+if [[ -d $IMGDIR/../amd64 ]]; then
+  export IMGDIR=$IMGDIR/../amd64
+elif [[ -d $HOME/img/amd64 ]]; then
+  export IMGDIR=$HOME/img/amd64
+else
+  echo "Unable to find amd64 images" >&2
+  exit 1
+fi
+
+TMP=$(mktemp -d build-XXXXXX)
+trap 'rm -f -r $TMP' EXIT
+
+pkg system $TMP/rootfs dosfstools e2fsprogs file kakoune lvm2 smartmon
+
+cp -d -R -T etc $TMP/rootfs/etc
+
+mkdir -p $TMP/rootfs/{run/empty,sys}
+mkdir -m 1777 -p $TMP/rootfs/run/{lock,shm}
+ln -f -s etc/init $TMP/rootfs/init
+ln -f -s kak $TMP/rootfs/bin/vi
+
+rm -f -r $TMP/rootfs/etc/{protocols,resolv.conf,services,ssl}
+rm -f -r $TMP/rootfs/lib/{include,static}
+
+tar -c -f ../boot/ramfs.img --format=newc --strip-components=2 --zstd \
+  --options zstd:compression-level=9 $TMP/rootfs
