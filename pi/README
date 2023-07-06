@@ -64,9 +64,9 @@ activity LED.
 To update the EEPROM from the USB SSD, copy pieeprom.bin and vl805.bin to
 /boot/pieeprom.upd and /boot/vl805.bin and generate checksums with
 
-  sha256sum /boot/pieeprom.upd | cut -d ' ' -f 1 >/boot/pieeprom.sig
-  sha256sum /boot/vl805.bin | cut -d ' ' -f 1 >/boot/vl805.sig
-  date -u "+ts: %s" >>/boot/pieeprom.sig
+  sha256sum pieeprom.upd | cut -d ' ' -f 1 >pieeprom.sig
+  sha256sum vl805.bin | cut -d ' ' -f 1 >vl805.sig
+  date -u "+ts: %s" >>pieeprom.sig
 
 The bootloader will update itself from these files on the next reboot if
 they differ from the version already in EEPROM. 
