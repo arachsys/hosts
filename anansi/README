@@ -1,31 +1,42 @@
 System info
 ===========
 
-anansi is an ASRockRack 1U4LW-X570/2L2T RPSU, with a 12-core AMD Ryzen 9
-5900X, 64GB ECC RAM, two 10Gb Intel X550-AT2 NICs, two 1Gb Intel i210 NICs
-and two 1863GB NVMe SSDs.
+anansi and aragog are ASRockRack 1U4LW-X570/2L2T RPSUs, each with a
+12-core AMD Ryzen 9 5900X, 64GB ECC RAM, two 10Gb Intel X550-AT2 NICs,
+two 1Gb Intel i210 NICs, two 1863GB NVMe SSDs and two 16.4TB HDDs.
 
 The integrated BMC is configured to redirect the UEFI console to a virtual
 8250 serial port ttyS1 (port 0x2f8, irq 3, 115200n8), exported over IPMI
 lanplus for remote installation and maintenance. This serial interface is
 also used as the Linux console once the kernel starts.
 
-The SSDs are GPT partitioned:
+The drives are GPT partitioned:
 
-  Device              Start        End    Sectors  Size Type
-  /dev/nvme0n1p1       2048    1050623    1048576  512M EFI System
-  /dev/nvme0n1p2    1050624 3907029134 3905978511  1.8T Linux RAID
-  /dev/nvme1n1p1       2048    1050623    1048576  512M EFI System
-  /dev/nvme1n1p2    1050624 3907029134 3905978511  1.8T Linux RAID
+  Device           Start        End      Sectors  Size Type       Name
+  /dev/nvme0n1p1    2048    1050623      1048576  512M EFI System boot
+  /dev/nvme0n1p2 1050624 3907028991   3905978368  1.8T Linux LVM
+  /dev/nvme1n1p1    2048    1050623      1048576  512M EFI System boot
+  /dev/nvme1n1p2 1050624 3907028991   3905978368  1.8T Linux LVM
+  /dev/sda1         2048     1050623     1048576  512M EFI System boot
+  /dev/sda2      1050624 35156654079 35155603456 16.4T Linux LVM
+  /dev/sdb1         2048     1050623     1048576  512M EFI System boot
+  /dev/sdb2      1050624 35156654079 35155603456 16.4T Linux LVM
 
-with /dev/nvme0n1p1 and /dev/nvme1n1p1 as /boot/nvme0 and /boot/nvme1 (vfat)
-respectively. /dev/nvme0n1p2 and /dev/nvme1n1p2 are mirrored in an md raid1
-as / (ext4) created with mkfs.ext4 -O project,quota.
+with /dev/nvme0n1p1, /dev/nvme1n1p1, /dev/sda1 and /dev/sdb1 as vfat for
+EFI, each with GPT and FS label 'boot' and mounted on /boot/DEVICE.
+
+/dev/nvme0n1p2, /dev/nvme1n1p2, /dev/sda2 and /dev/sdb2 are LVM2 PVs in the
+volume groups /dev/anansi or /dev/aragog respectively, with /dev/*/root
+as / (ext4) created with mkfs.ext4 -L root -O project,quota.
 
 The kernel is booted directly by the UEFI BIOS with command line
 
-  linux.efi console=ttyS1,115200n8 loglevel=2 \
-    md=0,/dev/nvme0n1p2,/dev/nvme1n1p2 root=/dev/md0
+  linux.efi console=tty0 console=ttyS1,115200n8 initrd=ramfs.img loglevel=2
+
+The initramfs ramfs.img is built by ramfs/build and activates the
+LVM volume groups before mounting /dev/*/root as the root filesystem.
+It also offers a chance to interrupt boot and enter a maintenance shell
+for system repair.
 
 We use a 1G zram device as swap to limit SSD wear.
 
@@ -44,3 +55,128 @@ The firmware/regulatory.db database is obtained from
 
 The firmware/bios/ directory contains a flash image for the deployed version
 of the manufacturer's UEFI BIOS.
+
+
+BIOS and BMC configuration
+--------------------------
+
+UEFI version: X570D4U-2L2T L1.74
+BMC version: 3.04.00
+
+From BIOS defaults:
+
+  - Main
+      - Set time and date to UTC
+  - Advanced
+      - Chipset configuration
+          - Above 4G decoding: enabled
+          - SR-IOV support: enabled
+          - Re-size BAR support: auto
+          - Restore AC power loss: power on
+      - Storage configuration
+          - SATA hotplug: enabled
+      - USB configuration
+          - Legacy USB support: UEFI setup only
+      - Serial port console redirection
+          - COM1 console redirection: enabled
+          - COM1 console redirection settings
+              - Terminal type: VT-UTF8
+              - Resolution 100x31: enabled
+          - SOL console redirection: enabled
+          - SOL console redirection settings
+              - Terminal type: VT-UTF8
+              - Resolution 100x31: enabled
+      - Network stack configuration
+          - Network stack: disabled
+      - AMD overclocking
+          - Precision boost overdrive
+              - Precision boost overdrive: advanced
+              - Platform thermal throttle limit: manual, 75
+  - Server management
+      - BMC network configuration
+        - Bonding status: disabled
+        - Interfaces: eth0 enabled, eth1 disabled
+        - Manual setting IPMI LAN: yes
+        - Configuration address source: static
+        - Station IP address: 10.10.10.1 / 10.10.10.2
+        - Current subnet mask: 255.255.255.0
+        - VLAN: disabled
+        - IPv6 support: disabled for eth0 and eth1
+  - Boot
+      - Boot option filter: UEFI only
+      - Boot beep: enabled
+
+Note: do not enable fast boot. This makes it impossible to return to the
+setup menu as the serial console isn't initialised quickly enough.
+
+From BMC defaults:
+
+  - Reset admin password on first login
+  - Configuration
+      - Date & time
+          - Set correct time with zone Etc/GMT
+      - Services
+          - Disable all except 'web', 'kvm' and 'vnc'
+      - User management
+          - Leave 'admin' (#2) user enabled with administrator privileges
+          - Disable 'Administrator' (#3) user access and privileges
+
+
+Configuring boot entries using the UEFI shell
+---------------------------------------------
+
+List the current boot entries:
+
+  bcfg boot dump
+  bcfg boot dump -v
+
+Delete the existing boot entries:
+
+  bcfg boot rm n
+  ...
+  bcfg boot rm 1
+  bcfg boot rm 0
+
+Create a temporary file with the utf-16 encoded kernel command line:
+
+  edit fs0:options.txt
+  hexedit fs0:options.txt [remove leading 2-byte BOM]
+
+This should contain the single line
+
+  console=tty0 console=ttyS1,115200n8 initrd=ramfs.img loglevel=2
+
+Finally, create the boot entries with options.txt appended:
+
+  bcfg boot addp 0 fs0:linux.efi "Arachsys Linux"
+  bcfg boot -opt 0 fs0:options.txt
+
+  bcfg boot addp 1 fs1:linux.efi "Arachsys Linux"
+  bcfg boot -opt 1 fs0:options.txt
+
+  bcfg boot addp 2 fs2:linux.efi "Arachsys Linux"
+  bcfg boot -opt 2 fs0:options.txt
+
+  bcfg boot addp 3 fs3:linux.efi "Arachsys Linux"
+  bcfg boot -opt 3 fs0:options.txt
+
+Note that a UEFI setup bug precludes more than one boot entry per partition
+on these machines.
+
+
+Creating LVM2 VGs, root LV and filesystem
+-----------------------------------------
+
+To initialise the PV partitions and create the VG:
+
+  lvm vgcreate /dev/anansi /dev/nvme[01]n1p2 /dev/sd[ab]2
+
+Tag SSD and HDD PVs appropriately:
+
+  lvm pvchange --addtag ssd /dev/nvme[01]n1p2
+  lvm pvchange --addtag hdd /dev/sd[ab]2
+
+Create the RAID1 root LV on the SSD PVs then make the filesystem:
+
+  lvm lvcreate -m 1 -n root -L 64G /dev/anansi @ssd
+  mkfs.ext4 -L root -O project,quota /dev/anansi/root

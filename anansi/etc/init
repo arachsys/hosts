@@ -4,8 +4,11 @@ set -o pipefail
 export PATH=/bin
 
 start() {
-  printf '\ec'
   hostname anansi
+
+  if [[ $(mountpoint -d -q /tmp) == 0:2 ]]; then
+    find /tmp -mindepth 1 -xdev -delete && umount /tmp
+  fi
 
   mount -a -t proc
   mount -a -m -t cgroup2,devpts,devtmpfs,sysfs,tmpfs
@@ -32,7 +35,12 @@ start() {
   mount -o remount,rw /
   mount -a -t nonfs
 
-  if [[ -c /dev/watchdog ]] && exec >/dev/watchdog; then
+  blkid -o device -t PARTLABEL=boot | while read DEVICE; do
+    mount -m -r -t vfat -o fmask=0133,nodev,noexec,tz=UTC \
+      $DEVICE /boot/${DEVICE#/dev/}
+  done
+
+  if [[ -c /dev/watchdog ]] && exec >/dev/watchdog && wait; then
     trap 'printf V && exit' TERM
     while printf '\0'; do read -t 15; done
   fi <><(:) & disown
@@ -41,41 +49,28 @@ start() {
     daemon -c -r agetty ${TTY#/dev/}
   done
 
+  sysctl -q net.ipv{4,6}.conf.{all,default}.forwarding=1
+  sysctl -q net.ipv6.conf.eth2.proxy_ndp=1
+
   ip link set lo up
   ip link set eth2 up
-  ip address add 91.203.59.1/22 dev eth2
+
+  ip address add 91.203.56.10/24 dev eth2
+  ip address add 2001:67c:6f0::a/64 dev eth2
+
   ip route add default via 91.203.56.1
+  ip route add default via 2001:67c:6f0::1
 
   syslogd -s
   ueventd -t
   ssh-keygen -A && $(type -P sshd)
   daemon ntpd -p /run/ntpd.pid -s
 
-  iw reg set GB
-  ip netns add wifi
-  ip -n wifi link set lo up
-  ip netns exec wifi daemon -r iwd
-}
+  trap 'exec "$0" stop reboot' INT
+  trap 'exec "$0" stop poweroff' TERM
 
-listen() {
-  if [[ ! -p /dev/initctl ]]; then
-    rm -f /dev/initctl
-    mkfifo -m 0600 /dev/initctl
-  fi
-
-  trap "printf '\0reboot\0' >/dev/initctl" INT
   ctrlaltdel soft
-
-  while read -d '' -r MESSAGE; do
-    case "$MESSAGE" in
-      halt | poweroff | reboot)
-        exec "$0" stop "$MESSAGE"
-        ;;
-      run\ *)
-        eval "${MESSAGE#run }"
-        ;;
-    esac
-  done <>/dev/initctl
+  while true; do read; done <><(:)
 }
 
 stop() {
@@ -88,5 +83,4 @@ stop() {
   exec stop "$@"
 }
 
-trap listen EXIT
 "${@:-start}"
