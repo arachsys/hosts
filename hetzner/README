@@ -1,0 +1,40 @@
+System info
+===========
+
+hetzner is an arm64 virtual machine on an Heztner Ampere Altra host in
+Falkenstein, with 2 vCPUs, 4G RAM, 40G virtio scsi disk and virtio network.
+
+The disk is GPT partitioned with a 512M vfat /boot, and the kernel is booted
+directly from /boot/efi/boot/bootaa64.efi by the UEFI BIOS. The command line
+
+  console=tty0 loglevel=2 root=PARTLABEL=root
+
+is compiled into the kernel as boot entries cannot be configured manually.
+
+It is possible to netboot the VM from a Debian recovery image from the
+web interface at https://console.hetzner.cloud/ - this can be used for
+initial installation and emergency maintenance.
+
+To cross-compile the kernel, use
+
+  make -C linux ARCH=arm64 CROSS_COMPILE=aarch64-linux-musl-
+
+We use an ext4 root filesystem, with 1G zram swap to limit SSD wear.
+
+
+Partitioning and filesystems
+----------------------------
+
+Create the GPT label and partitions:
+
+  sfdisk /dev/sda <<< 'label: gpt'
+  sfdisk -a /dev/sda <<< 'size=512M, type=uefi, name=boot'
+  sfdisk -a /dev/sda <<< 'size=+, type=linux, name=root'
+
+Make the boot and root filesystems:
+
+  mkfs.vfat -n boot /dev/sda1
+  mkfs.ext4 -L root -O project,quota /dev/sda2
+
+Copy the kernel to /boot/efi/boot/bootaa64.efi as well as /boot/linux.efi
+so the hypervisor BIOS will automatically boot from it.

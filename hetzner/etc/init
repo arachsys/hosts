@@ -1,0 +1,75 @@
+#!/bin/bash
+
+set -o pipefail
+export PATH=/bin
+
+start() {
+  hostname hetzner
+
+  mount -a -t proc
+  mount -a -m -t cgroup2,devpts,devtmpfs,sysfs,tmpfs
+  mount -m -r -B /run/empty /run/empty
+  mkdir -m 1777 -p /run/lock /run/shm
+
+  ln -f -n -s pts/ptmx /dev/ptmx
+  ln -f -n -s /proc/self/fd /dev/fd
+  ln -f -n -s fd/0 /dev/stdin
+  ln -f -n -s fd/1 /dev/stdout
+  ln -f -n -s fd/2 /dev/stderr
+
+  if ZRAM=$(zramctl -f -s 1G); then
+    mkswap $ZRAM >/dev/null
+    swapon -d $ZRAM
+  fi
+
+  mount -o remount,ro /
+  fsck -a -A -P -T >/dev/null
+  if [[ $? -gt 1 ]]; then
+    sulogin -p /dev/console
+    sync && exec stop reboot
+  fi
+  mount -o remount,rw /
+  mount -a -t nonfs
+
+  if [[ -c /dev/watchdog ]] && exec >/dev/watchdog && wait; then
+    trap 'printf V && exit' TERM
+    while printf '\0'; do read -t 15; done
+  fi <><(:) & disown
+
+  dmesg --console-off
+  while read TTY _; do
+    daemon -c -r agetty $TTY
+  done < /proc/consoles
+
+  ip link set lo up
+  ip link set eth0 up
+
+  ip address add 49.13.60.179 dev eth0
+  ip address add 2a01:4f8:c17:ac0f::1/64 dev eth0
+
+  ip -4 route add default via inet6 fe80::1 dev eth0
+  ip -6 route add default via inet6 fe80::1 dev eth0
+
+  syslogd -k
+  ssh-keygen -A && $(type -P sshd)
+  daemon await-net ntpd -p /run/ntpd.pid
+
+  trap 'exec "$0" stop reboot' INT
+  trap 'exec "$0" stop poweroff' TERM
+
+  ctrlaltdel soft
+  while true; do read; done <><(:)
+}
+
+stop() {
+  kill -TERM -1 && sleep 2 && kill -KILL -1
+  touch -c /var/lib/ntpd.drift
+  if swapoff -a && umount -a -r; then
+    echo "Remounted filesystems read-only"
+  else
+    sync && echo "Flushed filesystem writes"
+  fi
+  exec stop "$@"
+}
+
+"${@:-start}"
