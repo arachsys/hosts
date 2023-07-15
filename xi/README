@@ -2,25 +2,20 @@ System info
 ===========
 
 xi is an ASRock 4X4 BOX 4800U, with an 8-core AMD Ryzen 7 4800U, integrated
-AMD Renoir GPU, 32GB RAM, dual Realtek r8169 NICs, Intel AX200 wifi and a
-932GB NVMe SSD.
+AMD Renoir GPU, 32G RAM, dual Realtek r8169 NICs, Intel AX200 wifi and
+a 932G NVMe SSD.
 
-The SSD is GPT partitioned:
+The SSD is GPT partitioned with a 512M vfat /boot, and the kernel is booted
+directly from /boot/efi/boot/bootx64.efi by the UEFI BIOS. The command line
 
-  Device           Start        End    Sectors  Size Type             Name
-  /dev/nvme0n1p1    2048    1050623    1048576  512M EFI System       boot
-  /dev/nvme0n1p2 1050624 1953524510 1952473887  931G Linux filesystem root
+  loglevel=2 root=PARTLABEL=root tsc=reliable
 
-/dev/nvme0n1p1 is /boot (vfat for EFI) with GPT and FS label 'boot'.
-/dev/nvme0n1p2 is / (ext4, -O project,quota) with GPT and FS label 'root'.
+is compiled into the kernel to avoid the need for a manually-configured
+UEFI boot entry.
 
-The kernel is booted directly by the UEFI BIOS with command line
-
-  linux.efi loglevel=2 root=PARTLABEL=root tsc=reliable
-
-We use a 1G zram device as swap to limit SSD wear and provide a ueventd
-disable rule to work around a hardware/BIOS bug with a phantom USB device
-which fails to enumerate.
+We use an ext4 root filesystem, with 1G zram swap to limit SSD wear.
+A ueventd disable rule works around a hardware/BIOS bug with a phantom
+USB device which fails to enumerate.
 
 
 Upstream firmware binaries
@@ -37,3 +32,21 @@ The firmware/regulatory.db database is obtained from
 
 The firmware/bios/ directory contains a flash image for the deployed version
 of the manufacturer's UEFI BIOS.
+
+
+Partitioning and filesystems
+----------------------------
+
+Create the GPT label and partitions:
+
+  sfdisk /dev/nvme0n1 <<< 'label: gpt'
+  sfdisk -a /dev/nvme0n1 <<< 'size=512M, type=uefi, name=boot'
+  sfdisk -a /dev/nvme0n1 <<< 'size=+, type=linux, name=root'
+
+Make the EFI and root filesystems:
+
+  mkfs.vfat -n boot /dev/nvme0n1p1
+  mkfs.ext4 -L root -O project,quota /dev/nvme0n1p2
+
+Copy the kernel to /boot/efi/boot/bootx64.efi as well as /boot/linux.efi
+so the BIOS will use it as the default bootloader for the drive.

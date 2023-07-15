@@ -3,10 +3,11 @@ System info
 
 This is a minimal kernel configuration for Firecracker VMs. Build with
 
-  make vmlinux
-  strip vmlinux
+  make -C linux vmlinux
+  objcopy -R .comment -S linux/vmlinux boot/linux
+  chmod a-x boot/linux
 
-as we need an ELF executable rather than a bootable compressed image.
+as we need an ELF executable boot/linux rather than a compressed image.
 
 An example configuration is in guest.json; run with
 

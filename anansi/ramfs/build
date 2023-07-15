@@ -30,5 +30,7 @@ ln -f -s kak $TMP/rootfs/bin/vi
 rm -f -r $TMP/rootfs/etc/{protocols,resolv.conf,services,ssl}
 rm -f -r $TMP/rootfs/lib/{include,static}
 
-tar -c -f ../boot/ramfs.img --format=newc --strip-components=2 --zstd \
-  --options zstd:compression-level=9 $TMP/rootfs
+touch $TMP/rootfs/dev/console
+mount -B /dev/console $TMP/rootfs/dev/console
+tar -c -f ../boot/ramfs.cpio --format=newc --strip-components=2 $TMP/rootfs
+umount $TMP/rootfs/dev/console

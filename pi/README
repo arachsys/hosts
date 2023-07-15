@@ -2,31 +2,26 @@ System info
 ===========
 
 pi is a Raspberry Pi 4B, with a 4-core BCM2711 Cortex-A72 SoC, integrated
-VideoCore 6 GPU, 8GB RAM, Broadcom gigabit NIC, BCM43455 wifi and a 224GB
+VideoCore 6 GPU, 8G RAM, Broadcom gigabit NIC, BCM43455 wifi and a 224G
 USB3-attached-SCSI SSD.
 
-The SSD is MBR partitioned:
-
-  Device     Boot  Start       End   Sectors   Size Id Type
-  /dev/sda1         2048    526335    524288   256M  c W95 FAT32 (LBA)
-  /dev/sda2       526336 468877311 468350976 223.3G 83 Linux
-
-with /dev/sda1 as /boot (vfat) and /dev/sda2 as / (ext4).
-
-See boot/config.txt and boot/cmdline.txt for the bootloader config and
-kernel command line respectively.
+The SSD is GPT partitioned with a 256M vfat /boot, containing
+the bootloader, kernel and device tree. See boot/config.txt and
+boot/cmdline.txt for the bootloader config and kernel command line
+respectively.
 
 After building the kernel, install linux/arch/arm64/boot/Image.gz and
 linux/arch/arm64/boot/dts/broadcom/bcm2711-rpi-4-b.dtb as /boot/linux.img
 and /boot/rpi4b.dtb respectively. To cross-compile the kernel, use
 
-  make ARCH=arm64 CROSS_COMPILE=aarch64-linux-musl-
+  make -C linux ARCH=arm64 CROSS_COMPILE=aarch64-linux-musl-
 
-We use a 1G zram device as swap to limit SSD wear, and run
+We use an ext4 root filesystem, with 1G zram swap to limit SSD wear.
+TRIM is activated with
 
   echo -n unmap >/sys/block/sda/device/scsi_disk/*/provisioning_mode
 
-early in /etc/init to activate TRIM.
+early in /etc/init.
 
 The Pi 4B lacks an RTC, so we try to keep the clock monotonic until NTP
 sync takes over with
@@ -37,7 +32,7 @@ sync takes over with
 
 on boot and
 
-  touch -c /var/lib/ntpd.drift && sync
+  touch -c /var/lib/ntpd.drift
 
 on shutdown.
 
@@ -69,7 +64,7 @@ To update the EEPROM from the USB SSD, copy pieeprom.bin and vl805.bin to
   date -u "+ts: %s" >>pieeprom.sig
 
 The bootloader will update itself from these files on the next reboot if
-they differ from the version already in EEPROM. 
+they differ from the version already in EEPROM.
 
 
 Upstream firmware binaries
@@ -90,3 +85,22 @@ with the messy comments from the config files pruned using
 The firmware/regulatory.db database is obtained from
 
   https://git.kernel.org/pub/scm/linux/kernel/git/sforshee/wireless-regdb.git
+
+
+Partitioning and filesystems
+----------------------------
+
+Create the GPT label and partitions:
+
+  sfdisk /dev/sda <<< 'label: gpt'
+  sfdisk -a /dev/sda <<< 'size=256M, type=uefi, name=boot'
+  sfdisk -a /dev/sda <<< 'size=+, type=linux, name=root'
+
+Make the boot and root filesystems:
+
+  mkfs.vfat -n boot /dev/sda1
+  mkfs.ext4 -L root -O project,quota /dev/sda2
+
+Copy the bootloader, configuration, kernel and device tree from boot
+to /boot. The Raspberry Pi firmware will boot from the USB SSD or from
+an SD card automatically.

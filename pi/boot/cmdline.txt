@@ -1,1 +1,1 @@
-loglevel=2 root=/dev/sda2 rootwait
+loglevel=2 root=PARTLABEL=root rootwait spidev.bufsiz=65536

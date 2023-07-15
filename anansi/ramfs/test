@@ -19,7 +19,7 @@ exec firecracker --config-file /dev/fd/3 --no-api 3<<EOF
 {
   "boot-source": {
     "kernel_image_path": "../../firecracker/boot/linux",
-    "initrd_path": "../boot/ramfs.img",
+    "initrd_path": "../boot/ramfs.cpio",
     "boot_args": "quiet"
   },
   "machine-config": {

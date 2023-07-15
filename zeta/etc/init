@@ -36,9 +36,10 @@ start() {
     while printf '\0'; do read -t 15; done
   fi <><(:) & disown
 
-  for TTY in /dev/tty[1-6]; do
-    daemon -c -r agetty ${TTY#/dev/}
-  done
+  dmesg --console-off
+  while read TTY _; do
+    daemon -c -r agetty $TTY
+  done < /proc/consoles
 
   ip link set lo up
   iw reg set US
@@ -46,7 +47,7 @@ start() {
   syslogd -k
   daemon -p /run/iwd.pid -r iwd
   ssh-keygen -A && $(type -P sshd)
-  daemon ntpd -p /run/ntpd.pid -s
+  daemon await-net ntpd -p /run/ntpd.pid
 
   trap 'exec "$0" stop reboot' INT
   trap 'exec "$0" stop poweroff' TERM

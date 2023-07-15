@@ -14,6 +14,7 @@ iputils-ping
 iw
 iwd
 kakoune
+ldns-tools
 libelf
 m4
 mtr
@@ -21,13 +22,10 @@ nftables
 openntpd
 openssh
 perl
-pocketcrypt
 python
 rsync
 shadow
 strace
 tmux
-tor
-tube
 wireguard
 zoneinfo

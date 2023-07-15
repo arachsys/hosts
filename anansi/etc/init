@@ -45,26 +45,30 @@ start() {
     while printf '\0'; do read -t 15; done
   fi <><(:) & disown
 
-  for TTY in /dev/tty[1-6] /dev/ttyS[0-3]; do
-    daemon -c -r agetty ${TTY#/dev/}
-  done
+  dmesg --console-off
+  while read TTY _; do
+    daemon -c -r agetty $TTY
+  done < /proc/consoles
 
   sysctl -q net.ipv{4,6}.conf.{all,default}.forwarding=1
   sysctl -q net.ipv6.conf.eth2.proxy_ndp=1
 
   ip link set lo up
   ip link set eth2 up
+  ip link set eth3 mtu 9000 up
 
+  ip address add 10.10.10.20/24 dev eth2
   ip address add 91.203.56.10/24 dev eth2
   ip address add 2001:67c:6f0::a/64 dev eth2
 
-  ip route add default via 91.203.56.1
-  ip route add default via 2001:67c:6f0::1
+  ip route add default via 91.203.56.1 metric 2048 proto static
+  ip route add default via 2001:67c:6f0::1 metric 2048 proto static
 
-  syslogd -s
+  syslogd -b
   ueventd -t
   ssh-keygen -A && $(type -P sshd)
-  daemon ntpd -p /run/ntpd.pid -s
+  daemon await-net ntpd -p /run/ntpd.pid
+  bird -P /run/bird.pid
 
   trap 'exec "$0" stop reboot' INT
   trap 'exec "$0" stop poweroff' TERM

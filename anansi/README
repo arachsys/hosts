@@ -2,43 +2,33 @@ System info
 ===========
 
 anansi and aragog are ASRockRack 1U4LW-X570/2L2T RPSUs, each with a
-12-core AMD Ryzen 9 5900X, 64GB ECC RAM, two 10Gb Intel X550-AT2 NICs,
-two 1Gb Intel i210 NICs, two 1863GB NVMe SSDs and two 16.4TB HDDs.
+12-core AMD Ryzen 9 5900X, 64G ECC RAM, two 10Gb Intel X550-AT2 NICs,
+two 1Gb Intel i210 NICs, two 1863G NVMe SSDs and two 16.4T HDDs.
 
 The integrated BMC is configured to redirect the UEFI console to a virtual
 8250 serial port ttyS1 (port 0x2f8, irq 3, 115200n8), exported over IPMI
 lanplus for remote installation and maintenance. This serial interface is
 also used as the Linux console once the kernel starts.
 
-The drives are GPT partitioned:
+The drives are each GPT partitioned into a 512M vfat boot partition and
+an LVM2 PV, with the boot partitions mounted at /boot/* and the kernel
+booted directly from /boot/*/efi/boot/bootx64.efi by the UEFI BIOS.
 
-  Device           Start        End      Sectors  Size Type       Name
-  /dev/nvme0n1p1    2048    1050623      1048576  512M EFI System boot
-  /dev/nvme0n1p2 1050624 3907028991   3905978368  1.8T Linux LVM
-  /dev/nvme1n1p1    2048    1050623      1048576  512M EFI System boot
-  /dev/nvme1n1p2 1050624 3907028991   3905978368  1.8T Linux LVM
-  /dev/sda1         2048     1050623     1048576  512M EFI System boot
-  /dev/sda2      1050624 35156654079 35155603456 16.4T Linux LVM
-  /dev/sdb1         2048     1050623     1048576  512M EFI System boot
-  /dev/sdb2      1050624 35156654079 35155603456 16.4T Linux LVM
+An initramfs boot/ramfs.cpio is built by ramfs/build and compiled into
+the kernel. It activates the LVM volume groups before mounting /dev/*/root
+as the root filesystem, assuming this exists and is unique. It also offers
+a chance to interrupt boot and enter a maintenance shell for system repair.
 
-with /dev/nvme0n1p1, /dev/nvme1n1p1, /dev/sda1 and /dev/sdb1 as vfat for
-EFI, each with GPT and FS label 'boot' and mounted on /boot/DEVICE.
+The command line
 
-/dev/nvme0n1p2, /dev/nvme1n1p2, /dev/sda2 and /dev/sdb2 are LVM2 PVs in the
-volume groups /dev/anansi or /dev/aragog respectively, with /dev/*/root
-as / (ext4) created with mkfs.ext4 -L root -O project,quota.
+  console=tty0 console=ttyS1,115200n8 loglevel=2
 
-The kernel is booted directly by the UEFI BIOS with command line
+is also compiled into the kernel to avoid the need for manually-configured
+UEFI boot entries.
 
-  linux.efi console=tty0 console=ttyS1,115200n8 initrd=ramfs.img loglevel=2
-
-The initramfs ramfs.img is built by ramfs/build and activates the
-LVM volume groups before mounting /dev/*/root as the root filesystem.
-It also offers a chance to interrupt boot and enter a maintenance shell
-for system repair.
-
-We use a 1G zram device as swap to limit SSD wear.
+The four LVM2 PVs are combined into a volume group /dev/$(hostname),
+with /dev/$(hostname)/root as a 64G ext4 root filesystem. We use 1G zram
+swap to limit SSD wear.
 
 
 Upstream firmware binaries
@@ -122,61 +112,37 @@ From BMC defaults:
           - Disable 'Administrator' (#3) user access and privileges
 
 
-Configuring boot entries using the UEFI shell
----------------------------------------------
+Partitioning and filesystems
+----------------------------
 
-List the current boot entries:
+Create the GPT label and partitions:
 
-  bcfg boot dump
-  bcfg boot dump -v
+  for DEVICE in /dev/nvme[01]n1 /dev/sd[ab]; do
+    sfdisk $DEVICE <<< 'label: gpt'
+    sfdisk -a $DEVICE <<< 'size=512M, type=uefi, name=boot'
+    sfdisk -a $DEVICE <<< 'size=+, type=lvm'
+  done
 
-Delete the existing boot entries:
+Make the EFI filesystems:
 
-  bcfg boot rm n
-  ...
-  bcfg boot rm 1
-  bcfg boot rm 0
+  for DEVICE in /dev/nvme[01]n1p1 /dev/sd[ab]1; do
+    mkfs.vfat -n boot $DEVICE
+  done
 
-Create a temporary file with the utf-16 encoded kernel command line:
+Initialise the PV partitions and create the VG:
 
-  edit fs0:options.txt
-  hexedit fs0:options.txt [remove leading 2-byte BOM]
-
-This should contain the single line
-
-  console=tty0 console=ttyS1,115200n8 initrd=ramfs.img loglevel=2
-
-Finally, create the boot entries with options.txt appended:
-
-  bcfg boot addp 0 fs0:linux.efi "Arachsys Linux"
-  bcfg boot -opt 0 fs0:options.txt
-
-  bcfg boot addp 1 fs1:linux.efi "Arachsys Linux"
-  bcfg boot -opt 1 fs0:options.txt
-
-  bcfg boot addp 2 fs2:linux.efi "Arachsys Linux"
-  bcfg boot -opt 2 fs0:options.txt
-
-  bcfg boot addp 3 fs3:linux.efi "Arachsys Linux"
-  bcfg boot -opt 3 fs0:options.txt
-
-Note that a UEFI setup bug precludes more than one boot entry per partition
-on these machines.
-
-
-Creating LVM2 VGs, root LV and filesystem
------------------------------------------
-
-To initialise the PV partitions and create the VG:
-
-  lvm vgcreate /dev/anansi /dev/nvme[01]n1p2 /dev/sd[ab]2
+  lvm vgcreate /dev/$(hostname) /dev/nvme[01]n1p2 /dev/sd[ab]2
 
 Tag SSD and HDD PVs appropriately:
 
   lvm pvchange --addtag ssd /dev/nvme[01]n1p2
   lvm pvchange --addtag hdd /dev/sd[ab]2
 
-Create the RAID1 root LV on the SSD PVs then make the filesystem:
+Create the RAID1 root LV on the SSD PVs then make the root filesystem:
 
   lvm lvcreate -m 1 -n root -L 64G /dev/anansi @ssd
   mkfs.ext4 -L root -O project,quota /dev/anansi/root
+
+Copy the combined kernel and initramfs to /boot/*/efi/boot/bootx64.efi
+as well as /boot/*/linux.efi so the BIOS will use it as the default
+bootloader for each drive.
