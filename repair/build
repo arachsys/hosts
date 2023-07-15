@@ -32,5 +32,8 @@ ln -f -s kak $TMP/rootfs/bin/vi
 
 rm -f -r $TMP/rootfs/{etc/resolv.conf,lib/include,lib/static}
 
+touch $TMP/rootfs/dev/console
+mount -B /dev/console $TMP/rootfs/dev/console
 tar -c -f boot/repair.img --format=newc --strip-components=2 --zstd \
-  --options zstd:compression-level=9 $TMP/rootfs
+  --options zstd:compression-level=19 $TMP/rootfs
+umount $TMP/rootfs/dev/console
