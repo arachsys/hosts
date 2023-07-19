@@ -12,12 +12,21 @@
     {
       "drive_id": "rootfs",
       "path_on_host": "rootfs",
+      "is_direct_io": true,
       "is_root_device": true,
       "is_read_only": false,
       "cache_type": "Writeback",
       "io_engine": "Async"
     }
   ],
+  "entropy": {
+    "rate_limiter": {
+      "bandwidth": {
+        "size": 1000,
+        "refill_time": 100
+      }
+    }
+  },
   "network-interfaces": [
     {
       "iface_id": "eth0",
