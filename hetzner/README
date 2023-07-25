@@ -36,5 +36,6 @@ Make the boot and root filesystems:
   mkfs.vfat -n boot /dev/sda1
   mkfs.ext4 -L root -O project,quota /dev/sda2
 
-Copy the kernel to /boot/efi/boot/bootaa64.efi as well as /boot/linux.efi
-so the hypervisor BIOS will automatically boot from it.
+Copy the kernel from linux/arch/arm64/boot/Image to both /boot/linux.efi
+and /boot/efi/boot/bootaa64.efi so the hypervisor BIOS will automatically
+boot from it.

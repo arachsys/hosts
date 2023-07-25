@@ -10,8 +10,8 @@ if ! type -t firecracker >/dev/null; then
 elif [[ ! -f ../../firecracker/boot/linux ]]; then
   echo 'Missing kernel: ../../firecracker/boot/linux not found' 2>&1
   exit 1
-elif [[ ! -f ../boot/ramfs.img ]]; then
-  echo 'Missing initramfs: ../boot/ramfs.img not found' 2>&1
+elif [[ ! -f ../boot/ramfs.cpio ]]; then
+  echo 'Missing initramfs: ../boot/ramfs.cpio not found' 2>&1
   exit 1
 fi
 

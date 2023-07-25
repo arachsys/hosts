@@ -88,7 +88,7 @@ From BIOS defaults:
         - Interfaces: eth0 enabled, eth1 disabled
         - Manual setting IPMI LAN: yes
         - Configuration address source: static
-        - Station IP address: 10.10.10.1 / 10.10.10.2
+        - Station IP address: 10.10.10.10 / 10.10.10.11
         - Current subnet mask: 255.255.255.0
         - VLAN: disabled
         - IPv6 support: disabled for eth0 and eth1
@@ -143,6 +143,6 @@ Create the RAID1 root LV on the SSD PVs then make the root filesystem:
   lvm lvcreate -m 1 -n root -L 64G /dev/anansi @ssd
   mkfs.ext4 -L root -O project,quota /dev/anansi/root
 
-Copy the combined kernel and initramfs to /boot/*/efi/boot/bootx64.efi
-as well as /boot/*/linux.efi so the BIOS will use it as the default
-bootloader for each drive.
+Copy the combined kernel and initramfs from linux/arch/x86/boot/bzImage
+to /boot/*/efi/boot/bootx64.efi as well as /boot/*/linux.efi so the BIOS
+will use it as the default bootloader for each drive.

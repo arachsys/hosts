@@ -41,11 +41,13 @@ start() {
     daemon -c -r agetty $TTY
   done < /proc/consoles
 
+  sysctl -q net.ipv{4,6}.conf.{all,default}.forwarding=1
+
   ip link set lo up
   ip link set eth0 up
 
   ip address add 49.13.60.179 dev eth0
-  ip address add 2a01:4f8:c17:ac0f::1/64 dev eth0
+  ip address add 2a01:4f8:c17:ac0f::1 dev eth0
 
   ip -4 route add default via inet6 fe80::1 dev eth0
   ip -6 route add default via inet6 fe80::1 dev eth0
@@ -53,6 +55,7 @@ start() {
   syslogd -k
   ssh-keygen -A && $(type -P sshd)
   daemon await-net ntpd -p /run/ntpd.pid
+  daemon /etc/wireguard
 
   trap 'exec "$0" stop reboot' INT
   trap 'exec "$0" stop poweroff' TERM

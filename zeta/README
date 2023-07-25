@@ -49,5 +49,6 @@ Make the EFI and root filesystems:
   mkfs.vfat -n boot /dev/nvme0n1p1
   mkfs.ext4 -L root -O project,quota /dev/nvme0n1p2
 
-Copy the kernel to /boot/efi/boot/bootx64.efi as well as /boot/linux.efi
-so the BIOS will use it as the default bootloader for the drive.
+Copy the kernel from linux/arch/x86/boot/bzImage to both /boot/linux.efi
+and /boot/efi/boot/bootx64.efi so the BIOS will use it as the default
+bootloader for the drive.
