@@ -1,15 +1,25 @@
 System info
 ===========
 
-This is a minimal kernel configuration for Firecracker VMs. Build with
+This is a minimal kernel configuration for Firecracker VMs. Compile the
+amd64 kernel with
 
-  make -C linux vmlinux
-  objcopy -R .comment -S linux/vmlinux boot/linux
-  chmod a-x boot/linux
+  make -C linux-amd64
+  cp linux-amd64/arch/x86/boot/compressed/vmlinux.bin boot/linux-amd64
 
 as we need an ELF executable boot/linux rather than a compressed image.
 
-An example configuration is in guest.json; run with
+The build process for arm64 is more standard: compile the kernel with
+
+  make -C linux-arm64
+  cp linux-arm64/arch/arm64/boot/Image boot/linux-arm64
+
+or cross-compile it with
+
+  make -C linux-arm64 ARCH=arm64 CROSS_COMPILE=aarch64-linux-musl-
+  cp linux-arm64/arch/arm64/boot/Image boot/linux-arm64
+
+An example configuration is in guest.json: run with
 
   firecracker --no-api --config-file guest.json
 
