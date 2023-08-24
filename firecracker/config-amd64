@@ -1,4 +1,4 @@
-# Linux/x86 6.4.10 Kernel Configuration
+# Linux/x86 6.4.12 Kernel Configuration
 #
 # CONFIG_LOCALVERSION_AUTO is not set
 CONFIG_DEFAULT_INIT="/etc/init"
