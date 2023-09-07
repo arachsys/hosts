@@ -1,33 +1,12 @@
 diff --git a/drivers/mmc/host/sdhci.c b/drivers/mmc/host/sdhci.c
-index 324191614..66f300359 100644
+index ff41aa565..112b0c6cb 100644
 --- a/drivers/mmc/host/sdhci.c
 +++ b/drivers/mmc/host/sdhci.c
-@@ -1744,7 +1744,7 @@ static bool sdhci_send_command_retry(struct sdhci_host *host,
+@@ -1744,7 +1744,6 @@ static bool sdhci_send_command_retry(struct sdhci_host *host,
  			pr_err("%s: Controller never released inhibit bit(s).\n",
  			       mmc_hostname(host->mmc));
  			sdhci_err_stats_inc(host, CTRL_TIMEOUT);
 -			sdhci_dumpregs(host);
-+			// sdhci_dumpregs(host);
  			cmd->error = -EIO;
  			return false;
  		}
-diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/wcc/core.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/wcc/core.c
-index 02de99818..133d274b4 100644
---- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/wcc/core.c
-+++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/wcc/core.c
-@@ -12,13 +12,13 @@
- 
- static int brcmf_wcc_attach(struct brcmf_pub *drvr)
- {
--	pr_err("%s: executing\n", __func__);
-+	pr_info("%s: executing\n", __func__);
- 	return 0;
- }
- 
- static void brcmf_wcc_detach(struct brcmf_pub *drvr)
- {
--	pr_err("%s: executing\n", __func__);
-+	pr_info("%s: executing\n", __func__);
- }
- 
- const struct brcmf_fwvid_ops brcmf_wcc_ops = {
