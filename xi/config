@@ -182,7 +182,6 @@ CONFIG_DEVTMPFS=y
 CONFIG_EXTRA_FIRMWARE="amd-ucode/microcode_amd_fam17h.bin amdgpu/renoir_asd.bin amdgpu/renoir_ce.bin amdgpu/renoir_dmcub.bin amdgpu/renoir_gpu_info.bin amdgpu/renoir_me.bin amdgpu/renoir_mec.bin amdgpu/renoir_mec2.bin amdgpu/renoir_pfp.bin amdgpu/renoir_rlc.bin amdgpu/renoir_sdma.bin amdgpu/renoir_ta.bin amdgpu/renoir_vcn.bin iwlwifi-cc-a0-77.ucode regulatory.db"
 CONFIG_EXTRA_FIRMWARE_DIR="../firmware"
 CONFIG_CONNECTOR=y
-CONFIG_SYSFB_SIMPLEFB=y
 CONFIG_EFI_DISABLE_RUNTIME=y
 CONFIG_ZRAM=y
 CONFIG_BLK_DEV_LOOP=y
@@ -252,7 +251,6 @@ CONFIG_DRM=y
 CONFIG_DRM_AMDGPU=y
 CONFIG_DRM_AMD_ACP=y
 CONFIG_HSA_AMD=y
-CONFIG_DRM_SIMPLEDRM=y
 CONFIG_FB=y
 # CONFIG_VGA_CONSOLE is not set
 CONFIG_FRAMEBUFFER_CONSOLE=y
