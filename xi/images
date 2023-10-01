@@ -31,6 +31,5 @@ strace
 tcpdump
 tmux
 totp
-unbound
 wireguard
 zoneinfo
