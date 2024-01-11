@@ -1,17 +1,17 @@
 System info
 ===========
 
-This is a build script for a repair.img initramfs used for emergency repair
+This is a build script for a repair.zst initramfs used for emergency repair
 when developing Arachsys Linux machines. Build with 'build' and verify with
 'test' if firecracker and ../firecracker/boot/linux are available.
 
 To boot from the UEFI shell, use
 
-  linux.efi initrd=repair.img quiet
+  linux.efi initrd=repair.zst quiet
 
 Including the 'quiet' argument helps prevent kernel messages flooding
 the console while it is in interactive use. Multiple console arguments
-can be given to the kernel: if so, repair.img will start a shell on all
+can be given to the kernel: if so, repair.zst will start a shell on all
 of them rather than just the last console listed.
 
 When maintenance is complete, reboot or power down the host with 'reboot'

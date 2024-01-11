@@ -18,9 +18,9 @@ fi
 TMP=$(mktemp -d build-XXXXXX)
 trap 'rm -f -r $TMP' EXIT
 
-pkg system $TMP/rootfs dosfstools e2fsprogs file iproute2 iputils-ping \
-  iw iwd kakoune ldns-tools lvm2 mtr nftables openntpd openssh rsync \
-  shadow smartmon strace tcpdump tmux wireguard
+pkg system $TMP/rootfs curl dosfstools e2fsprogs file iproute2 iputils-ping \
+  iw iwd kakoune ldns-tools lvm2 mtr nftables openntpd openssh rsync shadow \
+  smartmon strace tcpdump tinyquota tmux wireguard
 
 cp -d -R -T etc $TMP/rootfs/etc
 update-etc $TMP/rootfs/etc
@@ -34,6 +34,6 @@ rm -f -r $TMP/rootfs/{etc/resolv.conf,lib/include,lib/static}
 
 touch $TMP/rootfs/dev/console
 mount -B /dev/console $TMP/rootfs/dev/console
-tar -c -f boot/repair.img --format=newc --strip-components=2 --zstd \
+tar -c -f boot/repair.zst --format=newc --strip-components=2 --zstd \
   --options zstd:compression-level=19 $TMP/rootfs
 umount $TMP/rootfs/dev/console

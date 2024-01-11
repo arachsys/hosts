@@ -8,9 +8,11 @@ start() {
   hostname repair
 
   mount -m -t devtmpfs -o mode=0755,noexec devtmpfs /dev
+  mount -m -t devpts -o newinstance,noexec,ptmxmode=0666 devpts /dev/pts
   mount -m -t proc -o nodev,noexec proc /proc
   mount -m -t sysfs -o nodev,noexec sysfs /sys
 
+  ln -f -n -s pts/ptmx /dev/ptmx
   ln -f -n -s /proc/self/fd /dev/fd
   ln -f -n -s fd/0 /dev/stdin
   ln -f -n -s fd/1 /dev/stdout
@@ -29,7 +31,7 @@ start() {
 
 stop() {
   kill -TERM -1 && sleep 2 && kill -KILL -1
-  if swapoff -a && umount -a -q -r; then
+  if swapoff -a && umount -a -r -t norootfs; then
     echo "Remounted filesystems read-only"
   else
     sync && echo "Flushed filesystem writes"

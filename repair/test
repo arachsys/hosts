@@ -10,8 +10,8 @@ if ! type -t firecracker >/dev/null; then
 elif [[ ! -f ../firecracker/boot/linux-amd64 ]]; then
   echo 'Missing kernel: ../firecracker/boot/linux-amd64 not found' 2>&1
   exit 1
-elif [[ ! -f boot/repair.img ]]; then
-  echo 'Missing initramfs: boot/repair.img not found' 2>&1
+elif [[ ! -f boot/repair.zst ]]; then
+  echo 'Missing initramfs: boot/repair.zst not found' 2>&1
   exit 1
 fi
 
@@ -19,7 +19,7 @@ exec firecracker --config-file /dev/fd/3 --no-api 3<<EOF
 {
   "boot-source": {
     "kernel_image_path": "../firecracker/boot/linux-amd64",
-    "initrd_path": "boot/repair.img",
+    "initrd_path": "boot/repair.zst",
     "boot_args": "quiet"
   },
   "machine-config": {
