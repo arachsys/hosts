@@ -8,59 +8,63 @@ start() {
   hostname initramfs
 
   mount -m -t devtmpfs -o mode=0755,noexec devtmpfs /dev
+  mount -m -t devpts -o newinstance,noexec,ptmxmode=0666 devpts /dev/pts
   mount -m -t proc -o nodev,noexec proc /proc
   mount -m -t sysfs -o nodev,noexec sysfs /sys
 
+  ln -f -n -s pts/ptmx /dev/ptmx
   ln -f -n -s /proc/self/fd /dev/fd
   ln -f -n -s fd/0 /dev/stdin
   ln -f -n -s fd/1 /dev/stdout
   ln -f -n -s fd/2 /dev/stderr
 
-  declare -A CONSOLE=()
+  if [[ $1 != repair ]]; then
+    declare -A CONSOLE=()
 
-  while read TTY _; do
-    read -p 'Press Enter for maintenance: ' -s -t 2 <>/dev/$TTY 2>&0 &
-    CONSOLE[$!]=$TTY
-  done < /proc/consoles
-
-  while true; do
-    if wait -n -p PID; then
-      kill -INT 0
-    elif test -v PID; then
-      unset "CONSOLE[$PID]"
-    else
-      break
-    fi
-  done
-
-  if [[ ${#CONSOLE[@]} -eq 0 ]]; then
     while read TTY _; do
-      echo no >/dev/$TTY
+      read -p 'Press Enter for maintenance: ' -s -t 2 <>/dev/$TTY 2>&0 &
+      CONSOLE[$!]=$TTY
     done < /proc/consoles
 
-    lvm vgchange -a y --sysinit >/dev/null
-    if set -- /dev/*/root && [[ $# -eq 1 ]]; then
-      if mount -m -r "$1" /root && cd /root; then
-        if [[ ! -x etc/init ]]; then
-          echo 'Root filesystem is missing /etc/init'
-        elif [[ ! -d tmp ]]; then
-          echo 'Root filesystem is missing /tmp'
-        elif mount --bind / tmp && mount --move . /; then
-          umount -q /dev /proc /sys
-          exec chroot . /etc/init
-        fi
+    while true; do
+      if wait -n -p PID; then
+        kill -INT 0
+      elif test -v PID; then
+        unset "CONSOLE[$PID]"
       else
-        echo 'Failed to mount root filesystem'
+        break
       fi
-    elif [[ $# -gt 1 ]]; then
-      echo 'Found multiple root filesystems'
+    done
+
+    if [[ ${#CONSOLE[@]} -eq 0 ]]; then
+      while read TTY _; do
+        echo no >/dev/$TTY
+      done < /proc/consoles
+
+      lvm vgchange -a y --sysinit >/dev/null
+      if set -- /dev/*/root && [[ $# -eq 1 ]]; then
+        if mount -m -r "$1" /root && cd /root; then
+          if [[ ! -x etc/init ]]; then
+            echo 'Root filesystem is missing /etc/init'
+          elif [[ ! -d tmp ]]; then
+            echo 'Root filesystem is missing /tmp'
+          elif mount --bind / tmp && mount --move . /; then
+            umount -l /dev /proc /sys
+            exec chroot . /etc/init
+          fi
+        else
+          echo 'Failed to mount root filesystem'
+        fi
+      elif [[ $# -gt 1 ]]; then
+        echo 'Found multiple root filesystems'
+      else
+        echo 'Failed to find root filesystem'
+      fi
     else
-      echo 'Failed to find root filesystem'
+      while read TTY _; do
+        echo yes >/dev/$TTY
+      done < /proc/consoles
     fi
-  else
-    while read TTY _; do
-      echo yes >/dev/$TTY
-    done < /proc/consoles
   fi
 
   while read TTY _; do
@@ -76,7 +80,7 @@ start() {
 
 stop() {
   kill -TERM -1 && sleep 2 && kill -KILL -1
-  if swapoff -a && umount -a -q -r; then
+  if swapoff -a && umount -a -r -t norootfs; then
     echo "Remounted filesystems read-only"
   else
     sync && echo "Flushed filesystem writes"
@@ -84,4 +88,8 @@ stop() {
   exec stop "$@"
 }
 
-"${@:-start}"
+if declare -F "$1" >/dev/null; then
+  "$1" "${@:2}"
+else
+  start "$@"
+fi

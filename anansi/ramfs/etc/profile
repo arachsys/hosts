@@ -1,2 +1,4 @@
-echo 'Please reboot when maintenance is complete'
-trap 'exec bash -l' EXIT
+if [[ $PPID -eq 1 ]]; then
+  echo 'Please reboot when maintenance is complete'
+  trap 'exec bash -l' EXIT
+fi
