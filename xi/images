@@ -9,11 +9,13 @@ flex
 fzf
 git
 go
+ipmitool
 iproute2
 iputils-ping
 iw
 iwd
 kakoune
+kmod
 ldns-tools
 libelf
 lldb

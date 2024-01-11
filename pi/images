@@ -1,6 +1,7 @@
 bc
 bison
 build
+dnsmasq
 dosfstools
 dtc
 e2fsprogs
@@ -26,6 +27,7 @@ python
 rsync
 shadow
 strace
+tinymbim
 tmux
 wireguard
 zoneinfo
