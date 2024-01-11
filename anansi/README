@@ -30,6 +30,12 @@ The four LVM2 PVs are combined into a volume group /dev/$(hostname),
 with /dev/$(hostname)/root as a 64G ext4 root filesystem. We use 1G zram
 swap to limit SSD wear.
 
+Build the combined kernel and initramfs with
+
+  cp config linux/.config && ramfs/build
+  make -C linux olddefconfig bzImage
+  cp linux/arch/x86/boot/bzImage boot/linux.efi
+
 
 Upstream firmware binaries
 --------------------------
@@ -143,6 +149,9 @@ Create the RAID1 root LV on the SSD PVs then make the root filesystem:
   lvm lvcreate -m 1 -n root -L 64G /dev/anansi @ssd
   mkfs.ext4 -L root -O project,quota /dev/anansi/root
 
-Copy the combined kernel and initramfs from linux/arch/x86/boot/bzImage
-to /boot/*/efi/boot/bootx64.efi as well as /boot/*/linux.efi so the BIOS
-will use it as the default bootloader for each drive.
+Copy the combined kernel and initramfs from boot/linux.efi to
+/boot/*/efi/boot/bootx64.efi as well as /boot/*/linux.efi so the BIOS will
+use it as the default bootloader for each drive.
+
+After imaging, ensure the root password is set and /dev, /proc, /sys,
+/home/root all exist.

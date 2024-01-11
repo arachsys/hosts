@@ -10,15 +10,6 @@ the bootloader, kernel and device tree. See boot/config.txt and
 boot/cmdline.txt for the bootloader config and kernel command line
 respectively.
 
-After building the kernel, install linux/arch/arm64/boot/Image.gz and
-linux/arch/arm64/boot/dts/broadcom/bcm2711-rpi-4-b.dtb as /boot/linux.img
-and /boot/rpi4b.dtb respectively. To cross-compile the kernel, use
-
-  make -C linux ARCH=arm64 CROSS_COMPILE=aarch64-linux-musl-
-
-Once compiled, copy linux/arch/arm64/boot/Image.gz to boot/linux.img and
-linux/arch/arm64/boot/dts/broadcom/bcm2711-rpi-4-b.dtb to boot/rpi4b.dtb.
-
 We use an ext4 root filesystem, with 1G zram swap to limit SSD wear.
 TRIM is activated with
 
@@ -38,6 +29,13 @@ on boot and
   touch -c /var/lib/ntpd.drift
 
 on shutdown.
+
+To cross-compile the kernel, use
+
+  cp config linux/.config
+  make -C linux olddefconfig Image dtbs ARCH=arm64
+  cp linux/arch/arm64/boot/Image.gz boot/linux.img
+  cp linux/arch/arm64/boot/dts/broadcom/bcm2711-rpi-4-b.dtb boot/rpi4b.dtb
 
 
 Updating the bootloader EEPROM

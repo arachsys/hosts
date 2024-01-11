@@ -15,11 +15,13 @@ It is possible to netboot the VM from a Debian recovery image from the
 web interface at https://console.hetzner.cloud/ - this can be used for
 initial installation and emergency maintenance.
 
+We use an ext4 root filesystem, with 1G zram swap to limit SSD wear.
+
 To cross-compile the kernel, use
 
-  make -C linux ARCH=arm64 CROSS_COMPILE=aarch64-linux-musl-
-
-We use an ext4 root filesystem, with 1G zram swap to limit SSD wear.
+  cp config linux/.config
+  make -C linux olddefconfig Image ARCH=arm64
+  cp linux/arch/arm64/boot/Image boot/linux.efi
 
 
 Partitioning and filesystems
@@ -36,6 +38,6 @@ Make the boot and root filesystems:
   mkfs.vfat -n boot /dev/sda1
   mkfs.ext4 -L root -O project,quota /dev/sda2
 
-Copy the kernel from linux/arch/arm64/boot/Image to both /boot/linux.efi
-and /boot/efi/boot/bootaa64.efi so the hypervisor BIOS will automatically
+Copy the kernel from boot/linux.efi to both /boot/linux.efi and
+/boot/efi/boot/bootaa64.efi so the hypervisor BIOS will automatically
 boot from it.
