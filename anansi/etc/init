@@ -50,19 +50,35 @@ start() {
     daemon -c -r agetty $TTY
   done < /proc/consoles
 
+  sysctl -q net.core.{r,w}mem_{default,max}=4194304
   sysctl -q net.ipv{4,6}.conf.{all,default}.forwarding=1
+  sysctl -q net.ipv4.conf.{all,default}.arp_evict_nocarrier=0
+  sysctl -q net.ipv6.conf.{all,default}.ndisc_evict_nocarrier=0
   sysctl -q net.ipv6.conf.eth2.proxy_ndp=1
 
   ip link set lo up
+  ip link set eth0 up
+  ip link set eth1 up
   ip link set eth2 up
   ip link set eth3 mtu 9000 up
 
-  ip address add 10.10.10.20/24 dev eth2
-  ip address add 91.203.56.10/24 dev eth2
+  ip address add 84.45.39.150/30 dev eth0
+  ip address add 2001:9d8:4:15::b/64 dev eth0
+
+  ip address add 194.153.169.172/31 dev eth1 scope link
+  ip address add 2001:baf::44:934a/127 dev eth1 preferred_lft 0
+
+  ip address add 91.203.56.10/22 dev eth2
   ip address add 2001:67c:6f0::a/64 dev eth2
 
-  ip route add default via 91.203.56.1 metric 2048 proto static
-  ip route add default via 2001:67c:6f0::1 metric 2048 proto static
+  ip address add 91.203.56.1/22 dev eth2
+  ip address add 2001:67c:6f0::1/64 dev eth2
+
+  ip address add 10.10.10.20/24 dev eth2 scope link
+  ip address add fe80::1/64 dev eth2 scope link
+
+  ip route add default via 84.45.39.149 metric 2048 proto static
+  ip route add default via 2001:9d8:4:15::a metric 2048 proto static
 
   syslogd -b
   ueventd -t
