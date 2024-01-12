@@ -1,0 +1,139 @@
+System info
+===========
+
+shelob and iktomi are Supermicro H8SGL-F motherboards in 1U dual-PSU
+chassis. Each has a 8-core AMD Opteron 6128, 20G ECC RAM, an Intel 82574
+NIC with two 1Gb ports, and four 4T SATA HDDs. Intel (igb) PCIe NICs are
+also installed, giving four and two additional 1Gb ports on shelob and
+iktomi respectively.
+
+The integrated BMC is configured to redirect the UEFI console to a virtual
+8250 serial port ttyS1 (port 0x2f8, irq 3, 115200n8), exported over IPMI
+lanplus for remote installation and maintenance. This serial interface
+is also used as the Linux console once the kernel starts.
+
+The drives are each hybrid GPT/MBR partitioned into a 512M ext4 boot
+partition and an LVM2 PV, with the boot partitions mounted at /boot/*
+and the kernel booted from /boot/*/vmlinuz by extlinux.
+
+An initramfs boot/ramfs.cpio is built by ramfs/build and compiled into
+the kernel. It activates the LVM volume groups before mounting /dev/*/root
+as the root filesystem, assuming this exists and is unique. It also offers
+a chance to interrupt boot and enter a maintenance shell for system repair.
+
+The command line
+
+  console=tty0 console=ttyS1,115200n8 loglevel=2
+
+is also compiled into the kernel to ensure the serial console is correctly
+configured when booting manually from the extlinux prompt.
+
+The four LVM2 PVs are combined into a volume group /dev/$(hostname),
+with /dev/$(hostname)/root as a 64G ext4 root filesystem. We use 1G zram
+swap to limit disk thrashing.
+
+Build the combined kernel and initramfs with
+
+  cp config linux/.config && ramfs/build
+  make -C linux olddefconfig bzImage
+  cp linux/arch/x86/boot/bzImage boot/linux.img
+
+
+Upstream firmware binaries
+--------------------------
+
+The CPU microcode firmware/amd-ucode/*.bin and wifi firmware ath9k_htc/*.fw
+are obtained from
+
+  https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
+
+The firmware/regulatory.db database is obtained from
+
+  https://git.kernel.org/pub/scm/linux/kernel/git/sforshee/wireless-regdb.git
+
+
+BIOS and BMC configuration
+--------------------------
+
+BIOS version: H8SGL(-F) 3.5b
+BMC version: 3.20
+
+From BIOS 'optimal' defaults:
+
+  - Main
+      - Set time and date to UTC
+  - Advanced
+      - Boot feature
+          - Quiet boot: disabled
+          - Power button function: 4s override
+          - Restore on AC power loss: power on
+      - NorthBridge chipset configuration
+          - ECC configuration
+            - ECC mode: super
+          - IOMMU: enabled
+      - IDE configuration
+          - OnChip SATA type: AMD_AHCI
+      - PCI/PnP configuration
+          - SR-IOV supported: enabled
+      - Remote access configuration
+          - Redirection after BIOS POST: disabled
+          - Terminal type: VT-UTF8
+      - IPMI configuration
+          - Set LAN configuration
+              - IP address: 10.10.10.12 / 10.10.10.13
+              - Subnet mask: 255.255.255.0
+  - Boot
+      - Boot device priority: USB, AHCI
+
+From BMC defaults:
+
+  - Reset admin password on first login
+  - Configuration
+      - Date & time
+          - Set correct UTC time
+      - Network
+          - Set hostname
+          - Check correct IPv4 and subnet mask
+          - Check no gateway or DNS set
+
+
+Partitioning and filesystems
+----------------------------
+
+Create the hybrid GPT label and partitions:
+
+  for DEVICE in /dev/sd[abcd]; do
+    dd if=boot/mbr.bin of=$DEVICE oflag=sync
+    sfdisk -q $DEVICE <<< 'label: gpt'
+    sfdisk -q -a $DEVICE <<< 'start=2048, size=512M, type=linux, name=boot'
+    sfdisk -q -a $DEVICE <<< 'size=+, type=lvm'
+    sfdisk -q -Y dos -N 1 $DEVICE <<< '2048, 512M, linux, *'
+    sfdisk -q -Y dos -a $DEVICE <<< '1, +, gpt'
+    sfdisk -q -Y dos -a $DEVICE <<< '-, +, gpt'
+    sfdisk -q -Y dos -r $DEVICE
+  done
+
+Make the boot ext4 filesystems and install extlinux:
+
+  for DEVICE in /dev/sd[abcd]1; do
+    mkfs.ext4 -L boot $DEVICE
+    mount -n $DEVICE /boot/${DEVICE##*/}
+    cp boot/extlinux.conf /boot/${DEVICE##*/}
+    boot/extlinux -i /boot/${DEVICE##*/}
+  done
+
+Initialise the PV partitions and create the VG:
+
+  lvm vgcreate /dev/$(hostname) /dev/sd[abcd]2
+  lvm pvchange --addtag hdd /dev/sd[abcd]2
+
+Create the RAID1 root LV then make the root filesystem:
+
+  lvm lvcreate -m 3 -n root -L 64G /dev/$(hostname)
+  mkfs.ext4 -L root -O project,quota /dev/$(hostname)/root
+
+Copy the combined kernel and initramfs from boot/linux.img to
+/boot/*/linux.img.
+
+After imaging, ensure the root password is set and /dev, /proc, /sys,
+/home/root all exist.

@@ -1,0 +1,108 @@
+#!/bin/bash
+
+set -o pipefail
+export PATH=/bin
+
+start() {
+  hostname shelob
+
+  if [[ $(mountpoint -d -q /tmp) == 0:2 ]]; then
+    find /tmp -mindepth 1 -xdev -delete && umount /tmp
+  fi
+
+  mount -a -t proc
+  mount -a -m -t cgroup2,devpts,devtmpfs,sysfs,tmpfs
+  mount -m -r -B /run/empty /run/empty
+  mkdir -m 1777 -p /run/lock /run/shm
+
+  ln -f -n -s pts/ptmx /dev/ptmx
+  ln -f -n -s /proc/self/fd /dev/fd
+  ln -f -n -s fd/0 /dev/stdin
+  ln -f -n -s fd/1 /dev/stdout
+  ln -f -n -s fd/2 /dev/stderr
+
+  if ZRAM=$(zramctl -f -s 1G); then
+    mkswap $ZRAM >/dev/null
+    swapon -d $ZRAM
+  fi
+
+  mount -o remount,ro /
+  fsck -a -A -P -T >/dev/null
+  if [[ $? -gt 1 ]]; then
+    sulogin -p /dev/console
+    sync && exec stop reboot
+  fi
+  mount -o remount,rw /
+  mount -a -t nonfs
+
+  blkid -o device -t PARTLABEL=boot | while read DEVICE; do
+    mount -m -r -t ext4 -o nodev,noexec $DEVICE /boot/${DEVICE#/dev/}
+  done
+
+  if [[ -c /dev/watchdog ]] && exec >/dev/watchdog && wait; then
+    trap 'printf V && exit' TERM
+    while printf '\0'; do read -t 15; done
+  fi <><(:) & disown
+
+  dmesg --console-off
+  while read TTY _; do
+    daemon -c -r agetty $TTY
+  done < /proc/consoles
+
+  sysctl -q net.core.{r,w}mem_{default,max}=4194304
+  sysctl -q net.ipv{4,6}.conf.{all,default}.forwarding=1
+  sysctl -q net.ipv4.conf.{all,default}.arp_evict_nocarrier=0
+  sysctl -q net.ipv6.conf.{all,default}.ndisc_evict_nocarrier=0
+  sysctl -q net.ipv6.conf.eth0.proxy_ndp=1
+
+  ip link set lo up
+  ip link set eth0 up
+  ip link set eth1 mtu 9000 up
+  ip link set eth5 up
+
+  ip address add 83.138.62.10/24 dev eth0
+  ip address add 2a05:5a41::a/64 dev eth0
+
+  ip address add 83.138.62.1/24 dev eth0
+  ip address add 2a05:5a41::1/64 dev eth0
+
+  ip address add 10.10.10.22/24 dev eth0 scope link
+  ip address add fe80::1/64 dev eth0 scope link
+
+  ip address add 84.45.24.98/30 dev eth5
+  ip address add 2001:9d8:4:4a::b/64 dev eth5 preferred_lft 0
+
+  ip route add 2a05:5a41:bb::/64 dev eth0 metric 256
+  ip route add default via 84.45.24.97 metric 2048 proto static
+  ip route add default via 2001:9d8:4:4a::a metric 2048 proto static
+
+  tc qdisc add dev eth0 root cake bandwidth 900Mbit ethernet lan
+
+  syslogd -b
+  ueventd -t
+  ssh-keygen -A && $(type -P sshd)
+  daemon await-net ntpd -p /run/ntpd.pid
+  bird -P /run/bird.pid
+
+  trap 'exec "$0" stop reboot' INT
+  trap 'exec "$0" stop poweroff' TERM
+
+  ctrlaltdel soft
+  while true; do read; done <><(:)
+}
+
+stop() {
+  kill -TERM -1 && sleep 5 && kill -KILL -1
+  if swapoff -a && umount -a -r; then
+    echo "Remounted filesystems read-only"
+  else
+    sync && echo "Flushed filesystem writes"
+  fi
+  exec stop "$@"
+}
+
+if declare -F "$1" >/dev/null; then
+  "$1" "${@:2}"
+else
+  start "$@"
+fi

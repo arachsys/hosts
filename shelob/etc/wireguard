@@ -1,0 +1,10 @@
+#!/bin/bash -e
+
+ip link add wg0 type wireguard
+wg set wg0 listen-port 51280 private-key /dev/stdin \
+  <<< "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+wg set wg0 peer "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=" \
+  allowed-ips ::/0 endpoint hetzner.arachsys.com:51280 persistent-keepalive 25
+
+ip link set wg0 up
+ip address add 2a01:4f8:c17:ac0f::a/0 dev wg0
