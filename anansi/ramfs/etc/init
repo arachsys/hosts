@@ -49,7 +49,7 @@ start() {
           elif [[ ! -d tmp ]]; then
             echo 'Root filesystem is missing /tmp'
           elif mount --bind / tmp && mount --move . /; then
-            umount -l /dev /proc /sys
+            umount -l /dev /sys /proc
             exec chroot . /etc/init
           fi
         else
