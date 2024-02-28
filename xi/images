@@ -4,11 +4,11 @@ build
 dosfstools
 e2fsprogs
 file
-firecracker
 flex
 fzf
 git
 go
+hypervisor
 ipmitool
 iproute2
 iputils-ping

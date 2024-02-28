@@ -3,7 +3,7 @@ System info
 
 This is a build script for a repair.zst initramfs used for emergency repair
 when developing Arachsys Linux machines. Build with 'build' and verify with
-'test' if firecracker and ../firecracker/boot/linux are available.
+'test' if hyper and ../guest/boot/linux are available.
 
 To boot from the UEFI shell, use
 

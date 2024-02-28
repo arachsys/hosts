@@ -1,6 +1,6 @@
 This is a build script for the initramfs used for booting and emergency
 maintenance on Arachsys machines. Build with 'build' and verify with
-'test' if firecracker and firecracker/boot/linux are available.
+'test' if hyper and guest/boot/linux are available.
 
 If boot is interrupted by pressing Enter at the maintenance prompt on
 any of the machine consoles, the system can be restarted using the normal

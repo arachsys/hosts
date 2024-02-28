@@ -3,9 +3,9 @@ curl
 dosfstools
 e2fsprogs
 file
-firecracker
 fzf
 git
+hypervisor
 ipmitool
 iproute2
 iputils-ping

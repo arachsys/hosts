@@ -1,0 +1,12 @@
+System info
+===========
+
+This is a minimal kernel configuration for Cloud Hypervisor VMs.
+
+Compile the compressed amd64 kernel with
+
+  cp config linux/.config
+  make -C linux olddefconfig bzImage
+  cp linux/arch/x86/boot/bzImage boot/linux
+
+This can be used directly with the hyper --kernel option.
