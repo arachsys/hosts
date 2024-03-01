@@ -20,8 +20,8 @@ We use an ext4 root filesystem, with 1G zram swap to limit SSD wear.
 To cross-compile the kernel, use
 
   cp config linux/.config
-  make -C linux olddefconfig Image ARCH=arm64
-  cp linux/arch/arm64/boot/Image boot/linux.efi
+  make -C linux olddefconfig vmlinuz.efi ARCH=arm64
+  cp linux/arch/arm64/boot/vmlinuz.efi boot/linux.efi
 
 
 Partitioning and filesystems
