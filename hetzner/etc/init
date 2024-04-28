@@ -17,7 +17,7 @@ start() {
   ln -f -n -s fd/1 /dev/stdout
   ln -f -n -s fd/2 /dev/stderr
 
-  if ZRAM=$(zramctl -f -s 1G); then
+  if ZRAM=$(zramctl -f -s 2G); then
     mkswap $ZRAM >/dev/null
     swapon -d $ZRAM
   fi
@@ -52,10 +52,11 @@ start() {
   ip -4 route add default via inet6 fe80::1 dev eth0
   ip -6 route add default via inet6 fe80::1 dev eth0
 
-  syslogd -k
+  syslogd -b
   ssh-keygen -A && $(type -P sshd)
   daemon await-net ntpd -p /run/ntpd.pid
   daemon /etc/wireguard
+  users start
 
   trap 'exec "$0" stop reboot' INT
   trap 'exec "$0" stop poweroff' TERM
@@ -65,6 +66,7 @@ start() {
 }
 
 stop() {
+  users stop && sleep 3
   kill -TERM -1 && sleep 2 && kill -KILL -1
   touch -c /var/lib/ntpd.drift
   if swapoff -a && umount -a -r; then
@@ -75,8 +77,15 @@ stop() {
   exec stop "$@"
 }
 
-if declare -F "$1" >/dev/null; then
-  "$1" "${@:2}"
-else
-  start "$@"
-fi
+users() {
+  getent passwd | while IFS=: read -r USER _ _ _ _ HOME SHELL; do
+    if [[ -x $HOME/.config/init/$1 ]]; then
+      daemon -d "$HOME" -u "$USER" \
+        env -i HOME="$HOME" LOGNAME="$USER" PATH="$PATH" SHELL="$SHELL" \
+          USER="$USER" "$HOME/.config/init/$1" "${@:2}"
+      logger -p user.info -t init "Spawned $HOME/.config/init/$1"
+    fi
+  done
+}
+
+"${@:-start}"

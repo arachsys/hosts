@@ -56,14 +56,18 @@ start() {
   sysctl -q net.ipv6.conf.{all,default}.ndisc_evict_nocarrier=0
   sysctl -q net.ipv6.conf.eth2.proxy_ndp=1
 
+  sysctl -q net.ipv{4,6}.neigh.default.gc_thresh1=256
+  sysctl -q net.ipv{4,6}.neigh.default.gc_thresh2=1024
+  sysctl -q net.ipv{4,6}.neigh.default.gc_thresh3=2048
+
   ip link set lo up
   ip link set eth0 up
   ip link set eth1 up
   ip link set eth2 up
   ip link set eth3 mtu 9000 up
 
-  ip address add 84.45.39.150/30 dev eth0
-  ip address add 2001:9d8:4:15::b/64 dev eth0
+  ip address add 84.45.39.150/30 dev eth0 scope link
+  ip address add 2001:9d8:4:15::b/64 dev eth0 preferred_lft 0
 
   ip address add 194.153.169.172/31 dev eth1 scope link
   ip address add 2001:baf::44:934a/127 dev eth1 preferred_lft 0
@@ -77,14 +81,20 @@ start() {
   ip address add 10.10.10.20/24 dev eth2 scope link
   ip address add fe80::1/64 dev eth2 scope link
 
-  ip route add default via 84.45.39.149 metric 2048 proto static
-  ip route add default via 2001:9d8:4:15::a metric 2048 proto static
+  ip route add default via 84.45.39.149 metric 2048 \
+    proto static src 84.45.39.150
+  ip route add default via 2001:9d8:4:15::a metric 2048 \
+    proto static src 2001:9d8:4:15::b
 
   syslogd -b
   ueventd -t
   ssh-keygen -A && $(type -P sshd)
   daemon await-net ntpd -p /run/ntpd.pid
   bird -P /run/bird.pid
+
+  udpdns -d /etc/microdns -u dns 91.203.56.10 2001:67c:6f0::a
+  tcpdns -d /etc/microdns -u dns 91.203.56.10 2001:67c:6f0::a
+  users start
 
   trap 'exec "$0" stop reboot' INT
   trap 'exec "$0" stop poweroff' TERM
@@ -94,7 +104,8 @@ start() {
 }
 
 stop() {
-  kill -TERM -1 && sleep 5 && kill -KILL -1
+  users stop && sleep 3
+  kill -TERM -1 && sleep 2 && kill -KILL -1
   if swapoff -a && umount -a -r; then
     echo "Remounted filesystems read-only"
   else
@@ -103,8 +114,15 @@ stop() {
   exec stop "$@"
 }
 
-if declare -F "$1" >/dev/null; then
-  "$1" "${@:2}"
-else
-  start "$@"
-fi
+users() {
+  getent passwd | while IFS=: read -r USER _ _ _ _ HOME SHELL; do
+    if [[ -x $HOME/.config/init/$1 ]]; then
+      daemon -d "$HOME" -u "$USER" \
+        env -i HOME="$HOME" LOGNAME="$USER" PATH="$PATH" SHELL="$SHELL" \
+          USER="$USER" "$HOME/.config/init/$1" "${@:2}"
+      logger -p user.info -t init "Spawned $HOME/.config/init/$1"
+    fi
+  done
+}
+
+"${@:-start}"

@@ -55,6 +55,7 @@ start() {
   daemon -p /run/iwd.pid -r iwd
   ssh-keygen -A && $(type -P sshd)
   daemon await-net ntpd -p /run/ntpd.pid
+  users start
 
   trap 'exec "$0" stop reboot' INT
   trap 'exec "$0" stop poweroff' TERM
@@ -64,6 +65,7 @@ start() {
 }
 
 stop() {
+  users stop && sleep 3
   kill -TERM -1 && sleep 2 && kill -KILL -1
   touch -c /var/lib/ntpd.drift
   if swapoff -a && umount -a -r; then
@@ -74,8 +76,15 @@ stop() {
   exec stop "$@"
 }
 
-if declare -F "$1" >/dev/null; then
-  "$1" "${@:2}"
-else
-  start "$@"
-fi
+users() {
+  getent passwd | while IFS=: read -r USER _ _ _ _ HOME SHELL; do
+    if [[ -x $HOME/.config/init/$1 ]]; then
+      daemon -d "$HOME" -u "$USER" \
+        env -i HOME="$HOME" LOGNAME="$USER" PATH="$PATH" SHELL="$SHELL" \
+          USER="$USER" "$HOME/.config/init/$1" "${@:2}"
+      logger -p user.info -t init "Spawned $HOME/.config/init/$1"
+    fi
+  done
+}
+
+"${@:-start}"

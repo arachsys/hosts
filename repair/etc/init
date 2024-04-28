@@ -39,8 +39,4 @@ stop() {
   exec stop "$@"
 }
 
-if declare -F "$1" >/dev/null; then
-  "$1" "${@:2}"
-else
-  start "$@"
-fi
+${@:-start}
