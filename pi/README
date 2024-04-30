@@ -42,7 +42,7 @@ Updating the bootloader EEPROM
 ------------------------------
 
 To update the EEPROM from an SD card, copy recovery.bin, pieeprom.bin and
-vl805.bin from firmware/stable/ of
+vl805.bin from firmware-2711/latest/ of
 
   https://github.com/raspberrypi/rpi-eeprom
 
@@ -73,13 +73,14 @@ Upstream firmware binaries
 
 The GPU binaries boot/start4.elf and boot/fixup4.dat are obtained from
 
-  https://github.com/raspberrypi/firmware
+  https://github.com/raspberrypi/firmware/tree/master/boot
 
 The firmware/brcm/brcmfmac43455-sdio.* files are obtained from
 
   https://github.com/RPi-Distro/firmware-nonfree
 
-with the messy comments from the config files pruned using
+in debian/config/brcm80211/brcm, with the messy comments from the config
+files pruned using
 
   sed -e 's/ *#.*//' -e '/^ *$/d' -i brcmfmac43455-*.txt
 
