@@ -28,12 +28,10 @@ start() {
 
   mount -o remount,ro /
   fsck -a -A -P -T >/dev/null
-  if [[ $? -gt 1 ]]; then
-    sulogin -p /dev/console
-    sync && exec stop reboot
+  if [[ $? -le 1 ]]; then
+    mount -o remount,rw /
+    mount -a -t nonfs
   fi
-  mount -o remount,rw /
-  mount -a -t nonfs
 
   blkid -o device -t PARTLABEL=boot | while read DEVICE; do
     mount -m -r -t ext4 -o nodev,noexec $DEVICE /boot/${DEVICE#/dev/}
@@ -86,15 +84,20 @@ start() {
       bandwidth 900Mbit besteffort wash $HOOK rtt 10ms ethernet
   done
 
-  syslogd -b
+  if test -w /var/log; then
+    syslogd -b
+  else
+    syslogd -k
+  fi
+
   ueventd -t
   ssh-keygen -A && $(type -P sshd)
-  daemon await-net ntpd -p /run/ntpd.pid
+  ntpd -p /run/ntpd.pid
   bird -P /run/bird.pid
 
   udpdns -d /etc/microdns -u dns 83.138.62.10 2a05:5a41::a
   tcpdns -d /etc/microdns -u dns 83.138.62.10 2a05:5a41::a
-  users start
+  test -w / && users start
 
   trap 'exec "$0" stop reboot' INT
   trap 'exec "$0" stop poweroff' TERM
@@ -104,7 +107,7 @@ start() {
 }
 
 stop() {
-  users stop && sleep 3
+  test -w / && users stop && sleep 3
   kill -TERM -1 && sleep 2 && kill -KILL -1
   if swapoff -a && umount -a -r; then
     echo "Remounted filesystems read-only"

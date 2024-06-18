@@ -24,12 +24,10 @@ start() {
 
   mount -o remount,ro /
   fsck -a -A -P -T >/dev/null
-  if [[ $? -gt 1 ]]; then
-    sulogin -p /dev/console
-    sync && exec stop reboot
+  if [[ $? -le 1 ]]; then
+    mount -o remount,rw /
+    mount -a -t nonfs
   fi
-  mount -o remount,rw /
-  mount -a -t nonfs
 
   if [[ -c /dev/watchdog ]] && exec >/dev/watchdog && wait; then
     trap 'printf V && exit' TERM
@@ -46,10 +44,10 @@ start() {
 
   syslogd -k
   ueventd -t
-  daemon -p /run/iwd.pid -r iwd
+  daemon -p /run/iwd.pid -r -w /dev/log iwd
   ssh-keygen -A && $(type -P sshd)
-  daemon await-net ntpd -p /run/ntpd.pid
-  users start
+  daemon -w /run/resolv.conf ntpd -p /run/ntpd.pid
+  test -w / && users start
 
   trap 'exec "$0" stop reboot' INT
   trap 'exec "$0" stop poweroff' TERM
@@ -59,7 +57,7 @@ start() {
 }
 
 stop() {
-  users stop && sleep 3
+  test -w / && users stop && sleep 3
   kill -TERM -1 && sleep 2 && kill -KILL -1
   if swapoff -a && umount -a -r; then
     echo "Remounted filesystems read-only"

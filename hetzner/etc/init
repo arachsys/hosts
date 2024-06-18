@@ -24,12 +24,10 @@ start() {
 
   mount -o remount,ro /
   fsck -a -A -P -T >/dev/null
-  if [[ $? -gt 1 ]]; then
-    sulogin -p /dev/console
-    sync && exec stop reboot
+  if [[ $? -le 1 ]]; then
+    mount -o remount,rw /
+    mount -a -t nonfs
   fi
-  mount -o remount,rw /
-  mount -a -t nonfs
 
   if [[ -c /dev/watchdog ]] && exec >/dev/watchdog && wait; then
     trap 'printf V && exit' TERM
@@ -52,11 +50,16 @@ start() {
   ip -4 route add default via inet6 fe80::1 dev eth0
   ip -6 route add default via inet6 fe80::1 dev eth0
 
-  syslogd -b
+  if test -w /var/log; then
+    syslogd -b
+  else
+    syslogd -k
+  fi
+
   ssh-keygen -A && $(type -P sshd)
-  daemon await-net ntpd -p /run/ntpd.pid
+  ntpd -p /run/ntpd.pid
   daemon /etc/wireguard
-  users start
+  test -w / && users start
 
   trap 'exec "$0" stop reboot' INT
   trap 'exec "$0" stop poweroff' TERM
@@ -66,7 +69,7 @@ start() {
 }
 
 stop() {
-  users stop && sleep 3
+  test -w / && users stop && sleep 3
   kill -TERM -1 && sleep 2 && kill -KILL -1
   touch -c /var/lib/ntpd.drift
   if swapoff -a && umount -a -r; then
