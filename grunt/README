@@ -1,0 +1,8 @@
+System info
+===========
+
+grunt and snort are backup VMs on anansi and aragog respectively.
+They use the standard amd64 guest kernel with 2 vCPUs, 4G RAM, virtio
+network and 3T virtio disk, backed with LVM RAID1 over two SATA HDD PVs.
+
+The entire virtio disk /dev/vda is used for the ext4 root filesystem.

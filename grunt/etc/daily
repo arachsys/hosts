@@ -1,0 +1,14 @@
+#!/bin/bash
+
+while true; do
+  AWAIT=$((EPOCHSECONDS - EPOCHSECONDS % 86400 + 86400))
+  while wait && (( EPOCHSECONDS < AWAIT )); do
+    read -t $((AWAIT - EPOCHSECONDS))
+  done <><(:)
+
+  for DIR in /home/*; do
+    if [[ -x $DIR/backup ]]; then
+      su -s $DIR/backup ${DIR##*/}
+    fi
+  done
+done

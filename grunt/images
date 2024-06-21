@@ -1,0 +1,17 @@
+e2fsprogs
+file
+fzf
+iproute2
+iputils-ping
+kakoune
+ldns-tools
+mtr
+nftables
+openntpd
+openssh
+rsync
+shadow
+strace
+tinyquota
+tmux
+zoneinfo
